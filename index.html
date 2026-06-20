@@ -6,13 +6,13 @@
 <meta name="color-scheme" content="light only">
 <meta name="supported-color-schemes" content="light">
 <meta name="theme-color" content="#0B0A12">
-<title>Olimpo 2.0 — Cuenca</title>
-<meta name="description" content="Olimpo 2.0: centro cultural y asociación civil en Cuenca. Café, arte, conferencias y club.">
+<title>OLIMPO 2.0 — Consola del Club</title>
+<meta name="description" content="Olimpo 2.0: la consola del club. Tablero de personajes, anuncios y radio en vivo. A donde vas cuando extrañas a tu gente.">
 
-<meta property="og:title" content="Olimpo 2.0">
-<meta property="og:description" content="Centro cultural y asociación civil. Café, arte, conferencias, club. Cuenca, Ecuador.">
+<meta property="og:title" content="OLIMPO 2.0 — Consola del Club">
+<meta property="og:description" content="Tablero de personajes, anuncios y radio en vivo. A donde vas cuando extrañas a tu gente del Olimpo.">
 <meta property="og:type" content="website">
-<meta property="og:image" content="https://raw.githubusercontent.com/jfcarpiopuntocom/Olimpo_2_0/main/photo_1_2026-06-20_14-28-03.jpg">
+<meta property="og:image" content="https://raw.githubusercontent.com/jfcarpiopuntocom/Olimpo_2_0/main/photo_2_2026-06-20_14-28-03.jpg">
 
 <style>
 :root{
@@ -20,6 +20,7 @@
   forced-color-adjust: none;
   --bg:#0B0A12;
   --bg2:#15121F;
+  --bg3:#1D1830;
   --gold:#E8A020;
   --ember:#E86040;
   --jade:#28ECAA;
@@ -32,7 +33,7 @@ html,body{
   background:var(--bg);
   color:var(--text) !important;
   -webkit-text-fill-color:var(--text) !important;
-  font-family:'Cinzel',Georgia,'Times New Roman',serif;
+  font-family:'Courier New',ui-monospace,monospace;
   min-height:100vh;
   min-height:100svh;
   overflow-x:hidden;
@@ -40,12 +41,12 @@ html,body{
 @media (prefers-reduced-motion: reduce){
   *{animation:none !important;transition:none !important}
 }
-h1,h2,h3,p,li,a,span,em,strong,blockquote,figcaption,time,button,label{
+h1,h2,h3,p,li,a,span,em,strong,button,label,input{
   color:inherit !important;
   -webkit-text-fill-color:inherit !important;
 }
 @media (prefers-color-scheme: dark){
-  html,body,h1,h2,h3,p,li,a,span,em,strong,blockquote,figcaption,time,button,label{
+  html,body,h1,h2,h3,p,li,a,span,em,strong,button,label,input{
     color:var(--text) !important;
     -webkit-text-fill-color:var(--text) !important;
     background-color:var(--bg);
@@ -54,197 +55,163 @@ h1,h2,h3,p,li,a,span,em,strong,blockquote,figcaption,time,button,label{
 
 body{
   background:
-    radial-gradient(ellipse at 20% 0%, rgba(232,160,32,0.10), transparent 50%),
-    radial-gradient(ellipse at 80% 100%, rgba(40,236,170,0.08), transparent 50%),
+    radial-gradient(ellipse at 15% 0%, rgba(232,160,32,0.12), transparent 50%),
+    radial-gradient(ellipse at 85% 100%, rgba(40,236,170,0.10), transparent 50%),
     var(--bg);
+  padding-bottom:64px;
 }
 
-/* ---- nav ---- */
+/* scanlines, console feel */
+.scanlines{
+  position:fixed;inset:0;z-index:90;pointer-events:none;
+  background:repeating-linear-gradient(0deg, rgba(0,0,0,0.12) 0px, rgba(0,0,0,0.12) 1px, transparent 1px, transparent 3px);
+  opacity:.35;
+}
+
+/* ---- topbar ---- */
 header{
   position:sticky;top:0;z-index:50;
   background:var(--bg2);
   border-bottom:2px solid var(--gold);
-  padding:14px 16px;
+  padding:12px 16px;
   display:flex;align-items:center;justify-content:space-between;
 }
 .wordmark{
-  font-size:1.3rem;
-  letter-spacing:.04em;
-  color:var(--gold) !important;
-  -webkit-text-fill-color:var(--gold) !important;
-  font-weight:700;
+  font-size:1.15rem;letter-spacing:.02em;font-weight:700;
+  color:var(--gold) !important;-webkit-text-fill-color:var(--gold) !important;
 }
 .wordmark span{color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important;}
-nav{display:flex;gap:18px;font-family:Arial,sans-serif;font-size:.95rem}
-nav a{text-decoration:none;font-weight:600;min-height:44px;display:flex;align-items:center}
+.online-pill{
+  font-size:.82rem;border:1px solid var(--jade);border-radius:20px;padding:4px 10px;
+  color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important;
+}
+.online-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--jade);margin-right:6px;animation:pulse 1.6s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
-/* ---- hero ---- */
-.hero{position:relative;min-height:78vh;display:flex;align-items:flex-end}
-.hero img{
-  position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
-  filter:saturate(1.05) contrast(1.05);
-}
-.hero::after{
-  content:'';position:absolute;inset:0;
-  background:linear-gradient(180deg, rgba(11,10,18,0.15) 0%, rgba(11,10,18,0.55) 55%, rgba(11,10,18,0.95) 100%);
-}
-.hero-content{position:relative;z-index:2;padding:24px 20px 32px;width:100%}
-.eyebrow{
-  font-family:Arial,sans-serif;font-size:.85rem;letter-spacing:.12em;text-transform:uppercase;
-  color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important;font-weight:700;
-}
-.hero h1{
-  font-size:clamp(2.2rem, 9vw, 4rem);
-  font-size:2.2rem;
-  font-size:clamp(2.2rem, 9vw, 4rem);
-  line-height:1.05;margin:10px 0 14px;
-  text-shadow:0 2px 18px rgba(0,0,0,.6);
-}
-.hero p{font-family:Arial,sans-serif;font-size:1.05rem;color:var(--text2) !important;-webkit-text-fill-color:var(--text2) !important;max-width:480px}
+/* ---- boot / intro ---- */
+.boot{padding:28px 18px 10px;max-width:720px;margin:0 auto;text-align:center}
+.boot p{font-size:.95rem;color:var(--text2) !important;-webkit-text-fill-color:var(--text2) !important;line-height:1.6}
+.cursor{display:inline-block;width:9px;height:1.1em;background:var(--jade);vertical-align:text-bottom;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
 
-/* ---- sections ---- */
-section{padding:56px 18px;max-width:880px;margin:0 auto}
-.section-tag{
-  font-family:Arial,sans-serif;font-size:.82rem;letter-spacing:.1em;text-transform:uppercase;
-  color:var(--ember) !important;-webkit-text-fill-color:var(--ember) !important;font-weight:700;margin-bottom:8px;
-}
-h2{font-size:clamp(1.6rem,6vw,2.4rem);margin-bottom:18px}
-.lede{font-family:Arial,sans-serif;color:var(--text2) !important;-webkit-text-fill-color:var(--text2) !important;font-size:1.05rem;line-height:1.6;max-width:640px}
+main{max-width:720px;margin:0 auto;padding:18px}
 
-.niveles{display:grid;grid-template-columns:1fr;gap:16px;margin-top:24px}
-@media(min-width:680px){.niveles{grid-template-columns:repeat(3,1fr)}}
-.nivel-card{
-  background:var(--bg2);border:1px solid rgba(232,160,32,0.35);border-radius:14px;padding:22px;
-  position:relative;overflow:hidden;
+.panel{
+  background:var(--bg2);border:1px solid rgba(232,160,32,.35);border-radius:10px;
+  padding:16px;margin-bottom:18px;
 }
-.nivel-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--gold),var(--jade))}
-.nivel-num{font-family:Arial,sans-serif;font-size:.82rem;color:var(--text3) !important;-webkit-text-fill-color:var(--text3) !important;letter-spacing:.08em;text-transform:uppercase;font-weight:700}
-.nivel-card h3{font-size:1.3rem;margin:8px 0 10px;color:var(--gold) !important;-webkit-text-fill-color:var(--gold) !important}
-.nivel-card p{font-family:Arial,sans-serif;color:var(--text2) !important;-webkit-text-fill-color:var(--text2) !important;font-size:.98rem;line-height:1.55}
-
-.galeria{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:24px}
-@media(min-width:680px){.galeria{grid-template-columns:repeat(3,1fr)}}
-.galeria img{width:100%;height:200px;object-fit:cover;border-radius:10px;border:1px solid rgba(40,236,170,.25)}
-
-/* ---- ofertas ---- */
-.ofertas-box{
-  background:linear-gradient(135deg, rgba(232,160,32,0.12), rgba(40,236,170,0.08));
-  border:1px solid var(--gold);border-radius:14px;padding:24px;margin-top:20px;
+.panel-title{
+  font-size:.82rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;
+  color:var(--ember) !important;-webkit-text-fill-color:var(--ember) !important;margin-bottom:12px;
 }
-.ofertas-box h3{color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important;font-size:1.1rem;margin-bottom:6px}
-.ofertas-box p{font-family:Arial,sans-serif;color:var(--text2) !important;-webkit-text-fill-color:var(--text2) !important}
 
-/* ---- tablero placeholder ---- */
-.tablero-box{
-  background:var(--bg2);border:2px dashed rgba(40,236,170,.4);border-radius:14px;
-  padding:30px 20px;text-align:center;margin-top:20px;
+/* ---- board / characters ---- */
+.board{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:10px;
 }
-.tablero-box p{font-family:Arial,sans-serif;color:var(--text3) !important;-webkit-text-fill-color:var(--text3) !important;font-size:.95rem;margin-top:8px}
+@media(min-width:480px){.board{grid-template-columns:repeat(4,1fr)}}
+.char{
+  background:var(--bg3);border:2px solid transparent;border-radius:10px;
+  padding:10px 6px;text-align:center;cursor:pointer;min-height:44px;
+  transition:border-color .15s, transform .15s;
+}
+.char:active{transform:scale(.96)}
+.char.me{border-color:var(--jade);box-shadow:0 0 0 2px rgba(40,236,170,.3)}
+.sprite{
+  width:48px;height:48px;margin:0 auto 6px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:1.1rem;color:#0B0A12 !important;-webkit-text-fill-color:#0B0A12 !important;
+  border:2px solid rgba(255,255,255,.25);
+  image-rendering:pixelated;
+}
+.char-name{font-size:.78rem;color:var(--text2) !important;-webkit-text-fill-color:var(--text2) !important;font-weight:700;word-break:break-word}
+.char-status{font-size:.68rem;color:var(--text3) !important;-webkit-text-fill-color:var(--text3) !important;margin-top:2px}
+
+.whoami{font-family:Arial,sans-serif;font-size:.9rem;color:var(--text2) !important;-webkit-text-fill-color:var(--text2) !important;margin-bottom:12px}
+.whoami b{color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important}
+
+/* ---- anuncios ---- */
+.anuncio{border-left:3px solid var(--gold);padding:8px 12px;margin-bottom:8px;font-size:.9rem;color:var(--text2) !important;-webkit-text-fill-color:var(--text2) !important}
+.anuncio b{color:var(--gold) !important;-webkit-text-fill-color:var(--gold) !important}
+
+/* ---- mensajes / tablero de mensajes ---- */
+.msglist{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;margin-bottom:12px;padding-right:4px}
+.msg{background:var(--bg3);border-radius:8px;padding:8px 10px;font-size:.88rem}
+.msg .who{font-weight:700;color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important;margin-right:6px}
+.msg .when{font-size:.7rem;color:var(--text3) !important;-webkit-text-fill-color:var(--text3) !important;float:right}
+.msg-empty{color:var(--text3) !important;-webkit-text-fill-color:var(--text3) !important;font-size:.85rem;text-align:center;padding:14px}
+
+.msg-form{display:flex;gap:8px}
+.msg-form input{
+  flex:1;background:var(--bg3);border:1px solid var(--gold);border-radius:8px;
+  padding:0 12px;min-height:44px;font-family:Arial,sans-serif;font-size:.95rem;
+  color:var(--text) !important;-webkit-text-fill-color:var(--text) !important;
+}
+.msg-form input::placeholder{color:var(--text3)}
 .btn{
-  display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 22px;
+  display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 18px;
   background:var(--gold);color:#0B0A12 !important;-webkit-text-fill-color:#0B0A12 !important;
-  border:none;border-radius:8px;font-family:Arial,sans-serif;font-weight:700;font-size:1rem;
-  text-decoration:none;cursor:pointer;
+  border:none;border-radius:8px;font-family:Arial,sans-serif;font-weight:700;font-size:.95rem;
+  cursor:pointer;
 }
+.hint{font-family:Arial,sans-serif;font-size:.78rem;color:var(--text3) !important;-webkit-text-fill-color:var(--text3) !important;margin-top:8px}
 
 /* ---- radio ---- */
 .radio-bar{
   position:fixed;bottom:0;left:0;right:0;z-index:60;
   background:var(--bg2);border-top:2px solid var(--jade);
-  padding:10px 14px;display:flex;align-items:center;gap:12px;
+  padding:8px 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
   font-family:Arial,sans-serif;
 }
-.radio-bar button{
-  min-width:44px;min-height:44px;border-radius:50%;border:1px solid var(--gold);
-  background:transparent;color:var(--gold) !important;-webkit-text-fill-color:var(--gold) !important;
-  font-size:1.2rem;cursor:pointer;
-}
-.radio-track{font-size:.85rem;color:var(--text2) !important;-webkit-text-fill-color:var(--text2) !important;flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-.radio-label{font-size:.82rem;color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important;font-weight:700;letter-spacing:.06em}
-.radio-genres{display:flex;gap:8px;flex-wrap:wrap}
+.radio-track{font-size:.8rem;color:var(--text2) !important;-webkit-text-fill-color:var(--text2) !important;flex:1 1 100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.radio-label{font-size:.78rem;color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important;font-weight:700;letter-spacing:.06em}
+.radio-genres{display:flex;gap:6px;flex-wrap:wrap;flex:1}
 .radio-genre{
-  font-size:.82rem;font-weight:700;padding:8px 10px;border-radius:8px;border:1px solid var(--gold);
+  font-size:.78rem;font-weight:700;padding:7px 9px;border-radius:8px;border:1px solid var(--gold);
   background:transparent;color:var(--gold) !important;-webkit-text-fill-color:var(--gold) !important;
-  font-family:Arial,sans-serif;cursor:pointer;min-height:44px;
+  font-family:Arial,sans-serif;cursor:pointer;min-height:40px;
 }
 .radio-genre.active{background:rgba(232,160,32,0.18);box-shadow:0 0 0 2px var(--gold) inset}
 
-footer{padding:90px 18px 40px;text-align:center;font-family:Arial,sans-serif;color:var(--text3) !important;-webkit-text-fill-color:var(--text3) !important;font-size:.88rem}
+footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;color:var(--text3) !important;-webkit-text-fill-color:var(--text3) !important;font-size:.82rem}
 </style>
 </head>
 <body>
+<div class="scanlines"></div>
 
 <header>
   <div class="wordmark">OLIMPO <span>2.0</span></div>
-  <nav>
-    <a href="#niveles">Niveles</a>
-    <a href="#ofertas">Ofertas</a>
-    <a href="#tablero">Club</a>
-  </nav>
+  <div class="online-pill"><span class="online-dot"></span><span id="onlineCount">11</span> en el club</div>
 </header>
 
-<div class="hero">
-  <img src="photo_1_2026-06-20_14-28-03.jpg" alt="Vista de Cuenca desde Olimpo">
-  <div class="hero-content">
-    <div class="eyebrow">Centro Cultural · Asociación Civil</div>
-    <h1>Olimpo 2.0</h1>
-    <p>Tres niveles, una sola comunidad. Café y jugos en el sótano, arte y cultura cuencana en la calle, y la energía que conecta todo en una sola semiescalera.</p>
-  </div>
+<div class="boot">
+  <p>Esto no es una página. Es la consola del club.<br>A donde vienes cuando extrañas a tu gente del Olimpo<span class="cursor"></span></p>
 </div>
 
-<section id="niveles">
-  <div class="section-tag">El espacio</div>
-  <h2>Tres niveles, una semiescalera</h2>
-  <p class="lede">Local esquinero, centro cultural y asociación civil que vive de la comunidad que reúne.</p>
-  <div class="niveles">
-    <div class="nivel-card">
-      <div class="nivel-num">Sótano</div>
-      <h3>Barra & Cine</h3>
-      <p>Jugos y café de especialidad, proyecciones de películas, conferencias y charlas. El nivel para sentarse y quedarse.</p>
-    </div>
-    <div class="nivel-card">
-      <div class="nivel-num">Calle</div>
-      <h3>Arte & Ropa</h3>
-      <p>Camisetas y pinturas de autores cuencanos y amigos del club. La vitrina viva de la escena local.</p>
-    </div>
-    <div class="nivel-card">
-      <div class="nivel-num">Arriba</div>
-      <h3>Oficina de Jose</h3>
-      <p>El cuartel general del propietario. Mural neón-shamánico, mesa de mezcla, y la mirada que cuida todo el local.</p>
-    </div>
-  </div>
-</section>
+<main>
 
-<section id="galeria">
-  <div class="section-tag">El mural</div>
-  <h2>Ancestral · Grecorromano · Futurista</h2>
-  <p class="lede">La identidad visual de Olimpo: raíz ancestral, columna grecorromana, filo futurista. Trascendente ante todo.</p>
-  <div class="galeria">
-    <img src="photo_2_2026-06-20_14-28-03.jpg" alt="Mural neón Olimpo">
-    <img src="photo_4_2026-06-20_14-28-03.jpg" alt="Mural neón Olimpo detalle">
-    <img src="photo_3_2026-06-20_14-28-03.jpg" alt="Ajedrez en Olimpo">
-    <img src="photo_5_2026-06-20_14-28-03.jpg" alt="Noche en Olimpo">
+  <div class="panel" id="tablero-panel">
+    <div class="panel-title">Tablero · ¿Quién eres?</div>
+    <div class="whoami" id="whoami">Toca tu personaje para entrar al club.</div>
+    <div class="board" id="board"></div>
   </div>
-</section>
 
-<section id="ofertas">
-  <div class="section-tag">Hoy en Olimpo</div>
-  <h2>Novedades & Especiales</h2>
-  <div class="ofertas-box" id="ofertas-box">
-    <h3>Cargando especial del día…</h3>
-    <p>Pregunta en barra mientras tanto.</p>
+  <div class="panel" id="anuncios-panel">
+    <div class="panel-title">Anuncios del club</div>
+    <div id="anuncios-list"><div class="anuncio">Cargando anuncios…</div></div>
   </div>
-</section>
 
-<section id="tablero">
-  <div class="section-tag">El club</div>
-  <h2>Tablero de personajes</h2>
-  <p class="lede">Crea tu personaje, deja mensajes, coordina el club de la vida real. Próximamente: autenticación con tu PIN de 3 emojis, sin contraseñas, sin suplantación.</p>
-  <div class="tablero-box">
-    <p>🜂 🜁 🜃 — el tablero llega en v1.1</p>
-    <a class="btn" href="#" onclick="alert('Tablero de personajes: próximamente. Pregunta a Jose por el lanzamiento.');return false;">Avísenme</a>
+  <div class="panel" id="mensajes-panel">
+    <div class="panel-title">Mensajes en el tablero</div>
+    <div class="msglist" id="msglist"></div>
+    <div class="msg-form">
+      <input id="msgInput" type="text" maxlength="180" placeholder="Deja un mensaje al club…">
+      <button class="btn" id="msgSend">Enviar</button>
+    </div>
+    <p class="hint">Mensajes guardados en este navegador (v1.0). v1.1: tablero compartido en tiempo real para todo el club, vía Firebase.</p>
   </div>
-</section>
+
+</main>
 
 <!-- TAWK.TO WIDGET — Jose pega aquí su script cuando cree su cuenta gratis en tawk.to -->
 
@@ -253,10 +220,8 @@ footer{padding:90px 18px 40px;text-align:center;font-family:Arial,sans-serif;col
 </footer>
 
 <div class="radio-bar">
-  <div style="flex:1">
-    <div class="radio-label">RADIO OLIMPO</div>
-    <div class="radio-track" id="radioTrack">Elige una emisora</div>
-  </div>
+  <div class="radio-label">RADIO</div>
+  <div class="radio-track" id="radioTrack">Elige una emisora</div>
   <div class="radio-genres">
     <button class="radio-genre" data-genre="progressive_house">House</button>
     <button class="radio-genre" data-genre="electronica_70s">70s</button>
@@ -268,9 +233,106 @@ footer{padding:90px 18px 40px;text-align:center;font-family:Arial,sans-serif;col
 <audio id="radioAudio" preload="none"></audio>
 
 <script>
-/* Radio Olimpo: emisoras online en vivo (radio-browser.info, gratis, sin auth),
-   mismo patron que ajedrez-16bit. Sin mp3 que subir; streams pinned como
-   backup/respaldo primero, luego fallback por tag en el directorio. */
+/* ============================================================
+   Personajes del tablero — sprites generados en CSS (sin
+   dependencias de iconos externos, cero riesgo de licencia,
+   carga instantánea). Cada quien elige su personaje al tocarlo;
+   se guarda en localStorage de este navegador. v1.1: Firebase +
+   PIN de 3 emojis para que nadie pueda suplantar a nadie.
+   ============================================================ */
+(function(){
+  "use strict";
+  var CHARS = [
+    {name:"Jose", color:"#E8A020"},
+    {name:"David", color:"#28ECAA"},
+    {name:"Fer", color:"#E86040"},
+    {name:"Mateo", color:"#7C9CE8"},
+    {name:"Kevin", color:"#D060E8"},
+    {name:"Matto", color:"#E8D020"},
+    {name:"Mateo Tusisabes", color:"#60C8E8"},
+    {name:"Juan", color:"#E87090"},
+    {name:"Anahi", color:"#90E860"},
+    {name:"Laura", color:"#E89060"},
+    {name:"Maria", color:"#A060E8"}
+  ];
+  var board = document.getElementById('board');
+  var whoami = document.getElementById('whoami');
+  var me = localStorage.getItem('olimpo_me') || null;
+
+  function initials(name){
+    var parts = name.split(' ');
+    return parts.length>1 ? (parts[0][0]+parts[1][0]).toUpperCase() : name.slice(0,2).toUpperCase();
+  }
+
+  function render(){
+    board.innerHTML='';
+    CHARS.forEach(function(c){
+      var div = document.createElement('div');
+      div.className = 'char' + (me===c.name ? ' me' : '');
+      div.innerHTML =
+        '<div class="sprite" style="background:'+c.color+'">'+initials(c.name)+'</div>' +
+        '<div class="char-name">'+c.name+'</div>' +
+        '<div class="char-status">'+(me===c.name?'Eres tú':'en el club')+'</div>';
+      div.onclick = function(){
+        me = c.name;
+        localStorage.setItem('olimpo_me', me);
+        whoami.innerHTML = 'Estás jugando como <b>'+me+'</b>.';
+        render();
+      };
+      board.appendChild(div);
+    });
+    if(me) whoami.innerHTML = 'Estás jugando como <b>'+me+'</b>.';
+  }
+  render();
+
+  /* ---- mensajes del tablero (localStorage, demo v1.0) ---- */
+  var msglist = document.getElementById('msglist');
+  var msgInput = document.getElementById('msgInput');
+  var msgSend = document.getElementById('msgSend');
+  var KEY = 'olimpo_mensajes';
+
+  function loadMsgs(){
+    try{ return JSON.parse(localStorage.getItem(KEY)) || []; }catch(e){ return []; }
+  }
+  function saveMsgs(arr){ localStorage.setItem(KEY, JSON.stringify(arr.slice(-30))); }
+  function renderMsgs(){
+    var arr = loadMsgs();
+    if(!arr.length){ msglist.innerHTML = '<div class="msg-empty">Aún nadie ha dejado mensaje. Sé el primero.</div>'; return; }
+    msglist.innerHTML = arr.slice().reverse().map(function(m){
+      return '<div class="msg"><span class="when">'+m.time+'</span><span class="who">'+m.who+'</span>'+m.text+'</div>';
+    }).join('');
+  }
+  renderMsgs();
+
+  function send(){
+    var text = msgInput.value.trim();
+    if(!text) return;
+    var who = me || 'Anónimo';
+    var arr = loadMsgs();
+    arr.push({who:who, text:text, time:new Date().toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit'})});
+    saveMsgs(arr);
+    msgInput.value='';
+    renderMsgs();
+  }
+  msgSend.onclick = send;
+  msgInput.addEventListener('keydown', function(e){ if(e.key==='Enter') send(); });
+
+  /* ---- anuncios ---- */
+  fetch('ofertas.json').then(function(r){return r.json()}).then(function(d){
+    var box = document.getElementById('anuncios-list');
+    var html = '<div class="anuncio"><b>Hoy:</b> '+d.especial_del_dia+'</div>';
+    html += '<div class="anuncio"><b>Esta semana:</b> '+d.especial_de_la_semana+'</div>';
+    (d.novedades||[]).forEach(function(n){ html += '<div class="anuncio">'+n+'</div>'; });
+    box.innerHTML = html;
+  }).catch(function(){
+    document.getElementById('anuncios-list').innerHTML = '<div class="anuncio">No se pudieron cargar los anuncios.</div>';
+  });
+})();
+</script>
+
+<script>
+/* Radio Olimpo: emisoras online en vivo (radio-browser.info, gratis, sin auth).
+   Sin mp3 que subir; streams pinned como respaldo primero, luego fallback por tag. */
 (function(){
   "use strict";
   var RADIO_API='https://de1.api.radio-browser.info';
@@ -342,15 +404,6 @@ footer{padding:90px 18px 40px;text-align:center;font-family:Arial,sans-serif;col
   document.querySelectorAll('.radio-genre').forEach(function(b){
     b.onclick=function(){ playRadio(b.dataset.genre,b); };
   });
-
-  fetch('ofertas.json').then(function(r){return r.json()}).then(function(d){
-    var box = document.getElementById('ofertas-box');
-    var html = '<h3>' + d.especial_del_dia + '</h3><p>' + d.especial_de_la_semana + '</p>';
-    if(d.novedades && d.novedades.length){
-      html += '<p style="margin-top:10px">' + d.novedades.join(' · ') + '</p>';
-    }
-    box.innerHTML = html;
-  }).catch(function(){});
 })();
 </script>
 

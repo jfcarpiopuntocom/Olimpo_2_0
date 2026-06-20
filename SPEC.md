@@ -1,20 +1,22 @@
 # Olimpo 2.0 — Spec v1.0
 
-Local esquinero, 3 niveles, semiescalera conecta todo. Centro cultural y asociación civil.
-- **Sótano:** barra de jugos/café, peliculas, conferencias
-- **Calle:** camisetas + pinturas de autores cuencanos/amigos
-- **Arriba:** oficina privada de Jose (propietario)
+**No es un sitio web brochure. Es una consola interactiva** — a donde vas cuando extrañas a tu gente del Olimpo y no puedes ir. Tablero de personajes, anuncios y radio en vivo, estética de consola/game (scanlines, monospace, sprites).
+
+Centro cultural y asociación civil. Local esquinero, 3 niveles, semiescalera conecta todo (sótano: barra/café/cine/conferencias · calle: arte y camisetas · arriba: oficina de Jose) — contexto del lugar físico, no estructura de la consola.
 
 Look: 1/3 ancestral · 1/3 grecorromano · 1/3 futurista · 1% sensual/sexy, siempre trascendente.
 
 ## Microsistemas v1.0 (este repo)
 
-### 1. Avatares + chat (pendiente backend)
-- Stack propuesto: **Firebase** (Firestore + Realtime DB para presencia/chat, Auth anónimo)
-- Login sin password: **PIN de 3 emojis** elegidos por el usuario en su primera visita, guardado hasteado en Firestore junto a su nombre de personaje. Reset vía email (Firebase Auth email link) si lo pierde.
-- Evita suplantación: el PIN de 3 emojis (de un set de ~50) da ~125,000 combinaciones; se valida server-side (Cloud Function) antes de asociar el nombre.
-- Tablero: pixel-art simple (canvas o CSS grid), personajes se mueven con flechas, dejan mensajes flotantes (tipo post-it) anclados a coordenadas — sirve para coordinar el club en la vida real.
-- **No implementado aún en este push** — requiere proyecto Firebase propio de Jose (billing/quota). Placeholder UI ya en `index.html` (#tablero).
+### 1. Tablero de personajes — IMPLEMENTADO (local, sin backend aún)
+- 11 personajes fijos: Jose, David, Fer, Mateo, Kevin, Matto, Mateo Tusisabes, Juan, Anahi, Laura, Maria.
+- Sprites generados 100% en CSS (cuadro de color + iniciales) — cero dependencia de iconos externos, cero riesgo de licencia, carga instantánea.
+- Tocas tu personaje → te identificas como él en este navegador (`localStorage`). Se ve reflejado en el tablero de mensajes.
+- Mensajes del tablero: localStorage por navegador en v1.0 (cada quien ve solo lo que escribió en su propio dispositivo). **v1.1: Firestore en tiempo real** para que todo el club vea los mismos mensajes — junto con el PIN de 3 emojis para evitar suplantación:
+  - Stack: **Firebase** (Firestore para mensajes/presencia, Auth anónimo)
+  - Login sin password: **PIN de 3 emojis** elegido en la primera visita, guardado hasheado en Firestore junto al nombre de personaje. Reset vía email (Firebase Auth email link).
+  - Evita suplantación: ~125,000 combinaciones posibles de 3 emojis (set de ~50), validado server-side (Cloud Function) antes de asociar el nombre.
+  - **No implementado aún** — requiere proyecto Firebase propio de Jose (billing/quota).
 
 ### 2. Novedades/ofertas + chatbot
 - Chatbot recomendado: **Tawk.to** (gratis, sin límite de mensajes, widget JS de una línea, permite respuestas predefinidas/quick replies — ideal para upselling y "especial del día"). Alternativa: Crisp (free tier más limitado).
