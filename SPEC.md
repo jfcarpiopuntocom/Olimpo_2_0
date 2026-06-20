@@ -10,7 +10,7 @@ Look: 1/3 ancestral · 1/3 grecorromano · 1/3 futurista · 1% sensual/sexy, sie
 
 ### 1. Tablero de personajes — IMPLEMENTADO (local, sin backend aún)
 - 11 personajes fijos: Jose, David, Fer, Mateo, Kevin, Matto, Mateo Tusisabes, Juan, Anahi, Laura, Maria.
-- Sprites generados 100% en CSS (cuadro de color + iniciales) — cero dependencia de iconos externos, cero riesgo de licencia, carga instantánea.
+- Avatares vía **DiceBear** (estilo "adventurer"), open source, licencia MIT, uso comercial libre sin attribution requerida (https://www.dicebear.com/licenses/). Seed = nombre del personaje, así el avatar es siempre el mismo para cada quien. Aro de color por personaje (hombres/mujeres balanceado).
 - Tocas tu personaje → te identificas como él en este navegador (`localStorage`). Se ve reflejado en el tablero de mensajes.
 - Mensajes del tablero: localStorage por navegador en v1.0 (cada quien ve solo lo que escribió en su propio dispositivo). **v1.1: Firestore en tiempo real** para que todo el club vea los mismos mensajes — junto con el PIN de 3 emojis para evitar suplantación:
   - Stack: **Firebase** (Firestore para mensajes/presencia, Auth anónimo)

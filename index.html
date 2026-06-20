@@ -118,11 +118,10 @@ main{max-width:720px;margin:0 auto;padding:18px}
 .char:active{transform:scale(.96)}
 .char.me{border-color:var(--jade);box-shadow:0 0 0 2px rgba(40,236,170,.3)}
 .sprite{
-  width:48px;height:48px;margin:0 auto 6px;border-radius:8px;
-  display:flex;align-items:center;justify-content:center;
-  font-weight:700;font-size:1.1rem;color:#0B0A12 !important;-webkit-text-fill-color:#0B0A12 !important;
+  width:52px;height:52px;margin:0 auto 6px;border-radius:50%;
+  display:block;
   border:2px solid rgba(255,255,255,.25);
-  image-rendering:pixelated;
+  background:var(--bg);
 }
 .char-name{font-size:.78rem;color:var(--text2) !important;-webkit-text-fill-color:var(--text2) !important;font-weight:700;word-break:break-word}
 .char-status{font-size:.68rem;color:var(--text3) !important;-webkit-text-fill-color:var(--text3) !important;margin-top:2px}
@@ -234,34 +233,36 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
 
 <script>
 /* ============================================================
-   Personajes del tablero — sprites generados en CSS (sin
-   dependencias de iconos externos, cero riesgo de licencia,
-   carga instantánea). Cada quien elige su personaje al tocarlo;
-   se guarda en localStorage de este navegador. v1.1: Firebase +
-   PIN de 3 emojis para que nadie pueda suplantar a nadie.
+   Personajes del tablero — avatares vía DiceBear (open source,
+   licencia MIT, uso comercial libre, sin attribution requerida:
+   https://www.dicebear.com/licenses/). Estilo "adventurer" para
+   pinta neo-shamánica/futurista. Seed = nombre, así cada quien
+   tiene siempre el mismo avatar. Cada quien elige su personaje
+   al tocarlo; se guarda en localStorage de este navegador.
+   v1.1: Firebase + PIN de 3 emojis para que nadie suplante a nadie.
    ============================================================ */
 (function(){
   "use strict";
   var CHARS = [
-    {name:"Jose", color:"#E8A020"},
-    {name:"David", color:"#28ECAA"},
-    {name:"Fer", color:"#E86040"},
-    {name:"Mateo", color:"#7C9CE8"},
-    {name:"Kevin", color:"#D060E8"},
-    {name:"Matto", color:"#E8D020"},
-    {name:"Mateo Tusisabes", color:"#60C8E8"},
-    {name:"Juan", color:"#E87090"},
-    {name:"Anahi", color:"#90E860"},
-    {name:"Laura", color:"#E89060"},
-    {name:"Maria", color:"#A060E8"}
+    {name:"Jose", color:"E8A020", gender:"male"},
+    {name:"David", color:"28ECAA", gender:"male"},
+    {name:"Fer", color:"E86040", gender:"male"},
+    {name:"Mateo", color:"7C9CE8", gender:"male"},
+    {name:"Kevin", color:"D060E8", gender:"male"},
+    {name:"Matto", color:"E8D020", gender:"male"},
+    {name:"Mateo Tusisabes", color:"60C8E8", gender:"male"},
+    {name:"Juan", color:"E87090", gender:"male"},
+    {name:"Anahi", color:"90E860", gender:"female"},
+    {name:"Laura", color:"E89060", gender:"female"},
+    {name:"Maria", color:"A060E8", gender:"female"}
   ];
   var board = document.getElementById('board');
   var whoami = document.getElementById('whoami');
   var me = localStorage.getItem('olimpo_me') || null;
 
-  function initials(name){
-    var parts = name.split(' ');
-    return parts.length>1 ? (parts[0][0]+parts[1][0]).toUpperCase() : name.slice(0,2).toUpperCase();
+  function avatarUrl(c){
+    return 'https://api.dicebear.com/9.x/adventurer/svg?seed='+encodeURIComponent(c.name)+
+      '&backgroundColor='+c.color+'&backgroundType=solid';
   }
 
   function render(){
@@ -270,7 +271,7 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
       var div = document.createElement('div');
       div.className = 'char' + (me===c.name ? ' me' : '');
       div.innerHTML =
-        '<div class="sprite" style="background:'+c.color+'">'+initials(c.name)+'</div>' +
+        '<img class="sprite" loading="lazy" alt="'+c.name+'" src="'+avatarUrl(c)+'">' +
         '<div class="char-name">'+c.name+'</div>' +
         '<div class="char-status">'+(me===c.name?'Eres tú':'en el club')+'</div>';
       div.onclick = function(){
