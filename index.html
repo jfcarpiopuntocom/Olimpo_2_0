@@ -189,6 +189,13 @@ main{max-width:720px;margin:0 auto;padding:18px}
   width:46px;height:46px;border:2px solid var(--jade);border-radius:8px;
   display:flex;align-items:center;justify-content:center;font-size:1.4rem;background:var(--bg3);
 }
+.pin-modes{display:flex;gap:8px;margin-bottom:12px}
+.pin-mode{
+  flex:1;min-height:40px;font-family:Arial,sans-serif;font-size:.82rem;font-weight:700;
+  border:1px solid var(--jade);background:transparent;border-radius:8px;cursor:pointer;
+  color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important;
+}
+.pin-mode.active{background:rgba(40,236,170,.18);box-shadow:0 0 0 2px var(--jade) inset}
 .pin-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:16px}
 .pin-emoji{
   min-height:40px;font-size:1.25rem;background:var(--bg3);border:1px solid rgba(232,160,32,.3);
@@ -263,6 +270,10 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
   <div class="pin-box">
     <h3 id="pinTitle">Crea tu PIN</h3>
     <p id="pinSub">Elige 3 símbolos, en orden. Es tu llave — nadie más puede ser tú sin ella.</p>
+    <div class="pin-modes" id="pinModes">
+      <button class="pin-mode active" type="button" data-mode="emoji">3 emojis</button>
+      <button class="pin-mode" type="button" data-mode="digits">3 dígitos</button>
+    </div>
     <div class="pin-error" id="pinError"></div>
     <div class="pin-slots">
       <div class="pin-slot" id="pinSlot0"></div>
@@ -274,6 +285,7 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
       <button class="btn pin-cancel" id="pinCancel">Cancelar</button>
       <button class="btn" id="pinConfirm" style="flex:1">Confirmar</button>
     </div>
+    <p class="hint" id="pinRecoveryHint">¿Olvidaste ambos? Pídele a Jose que libere tu personaje.</p>
   </div>
 </div>
 
@@ -322,7 +334,7 @@ let me = localStorage.getItem('olimpo_me') || null;
 let myPin = JSON.parse(localStorage.getItem('olimpo_pin') || 'null'); // array of indices, cached so we don't re-ask every visit
 
 function avatarUrl(c){
-  return 'https://api.dicebear.com/9.x/adventurer/svg?seed='+encodeURIComponent(c.name)+'&backgroundColor='+c.color+'&backgroundType=solid';
+  return 'https://api.dicebear.com/9.x/bottts-neutral/svg?seed='+encodeURIComponent(c.name)+'&backgroundColor='+c.color+'&backgroundType=solid';
 }
 
 async function sha256(str){
@@ -346,30 +358,57 @@ function renderBoard(){
 }
 renderBoard();
 
-/* ---- modal de PIN ---- */
+/* ---- modal de PIN: dos métodos a elección — 3 emojis o 3 dígitos.
+   Cualquiera de los dos sirve como llave completa (se hashea igual);
+   eliges el método al crear tu PIN y usas ESE MISMO método para
+   volver a entrar. Si olvidas ambos, solo Jose puede liberar el
+   nombre desde la consola de Firebase (ver SPEC.md). ---- */
 const overlay = document.getElementById('pinOverlay');
 const pinTitle = document.getElementById('pinTitle');
 const pinSub = document.getElementById('pinSub');
 const pinError = document.getElementById('pinError');
 const pinGrid = document.getElementById('pinGrid');
 const pinSlots = [document.getElementById('pinSlot0'), document.getElementById('pinSlot1'), document.getElementById('pinSlot2')];
+const DIGITS = ['0','1','2','3','4','5','6','7','8','9'];
 let picked = [];
+let pinMode = 'emoji';
 
-PIN_SYMBOLS.forEach(function(sym){
-  const b = document.createElement('button');
-  b.className = 'pin-emoji'; b.type='button'; b.textContent = sym;
+function buildGrid(mode){
+  pinGrid.innerHTML='';
+  const items = mode==='emoji' ? PIN_SYMBOLS : DIGITS;
+  items.forEach(function(sym){
+    const b = document.createElement('button');
+    b.className = 'pin-emoji'; b.type='button'; b.textContent = sym;
+    b.onclick = function(){
+      if(picked.length>=3) return;
+      picked.push(sym);
+      pinSlots[picked.length-1].textContent = sym;
+    };
+    pinGrid.appendChild(b);
+  });
+}
+buildGrid(pinMode);
+
+document.querySelectorAll('.pin-mode').forEach(function(b){
   b.onclick = function(){
-    if(picked.length>=3) return;
-    picked.push(sym);
-    pinSlots[picked.length-1].textContent = sym;
+    pinMode = b.dataset.mode;
+    document.querySelectorAll('.pin-mode').forEach(function(x){ x.classList.remove('active'); });
+    b.classList.add('active');
+    picked = [];
+    pinSlots.forEach(function(s){ s.textContent=''; });
+    pinError.textContent='';
+    buildGrid(pinMode);
   };
-  pinGrid.appendChild(b);
 });
 
 function resetModal(){
   picked = [];
   pinSlots.forEach(function(s){ s.textContent=''; });
   pinError.textContent='';
+  pinMode = 'emoji';
+  document.querySelectorAll('.pin-mode').forEach(function(x){ x.classList.remove('active'); });
+  document.querySelector('.pin-mode[data-mode="emoji"]').classList.add('active');
+  buildGrid(pinMode);
 }
 function closeModal(){ overlay.classList.remove('show'); resetModal(); }
 document.getElementById('pinCancel').onclick = closeModal;
