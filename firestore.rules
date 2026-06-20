@@ -1,16 +1,49 @@
-// Reglas SOLO para las colecciones de Olimpo (prefijo olimpo_). No tocan
-// las reglas existentes del ajedrez — Jose: pega este bloque dentro de tus
-// reglas actuales en Firebase Console > Firestore Database > Reglas,
-// agregándolo junto a lo que ya tengas (no reemplaces todo el archivo).
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
+/* ============================================================
+   IMPORTANTE — esto NO es un archivo para reemplazar el tuyo.
+   Tu proyecto Firebase ya tiene reglas para el ajedrez (con su
+   propio "rules_version" y "service cloud.firestore { ... }").
+   Eso solo puede declararse UNA vez por archivo — si pegas este
+   bloque completo encima del tuyo, vas a tener dos declaraciones
+   duplicadas y Firebase te va a tirar "Parse error".
+
+   LO QUE SÍ HAY QUE HACER:
+   1. Abre Firebase Console > Firestore Database > Reglas
+   2. Busca la línea que dice  match /databases/{database}/documents {
+      (la tuya, la que ya existe para el ajedrez)
+   3. Pega los DOS bloques "match /olimpo_..." de abajo ahí ADENTRO,
+      junto a los match que ya tengas del ajedrez (ej. match /games/{id}
+      o lo que sea que uses) — todos los match conviven dentro del
+      mismo par de llaves exteriores.
+   4. NO copies las líneas "rules_version" ni "service cloud.firestore {"
+      — esas ya existen en tu archivo, no se duplican.
+
+   Ejemplo de cómo debería quedar tu archivo completo después:
+
+   rules_version = '2';
+   service cloud.firestore {
+     match /databases/{database}/documents {
+
+       match /games/{gameId} {              <-- esto ya lo tenías (ajedrez)
+         allow read, write: if true;
+       }
+
+       match /olimpo_personajes/{name} {     <-- esto es lo nuevo, pegado aquí
+         ...
+       }
+
+       match /olimpo_mensajes/{msgId} {       <-- esto también
+         ...
+       }
+
+     }
+   }
+   ============================================================ */
 
     // Personajes: cualquiera puede leer (para saber quién está tomado),
     // pero solo se puede crear una vez (claim) y nunca se puede pisar el
     // pinHash de otro — el cambio de pinHash solo lo hace quien ya lo sabe
-    // (verificado client-side antes de escribir; ver SPEC.md sección admin
-    // para el endurecimiento server-side con Cloud Functions en v1.2).
+    // (verificado client-side antes de escribir; endurecimiento server-side
+    // con Cloud Functions queda para v1.2, ver SPEC.md).
     match /olimpo_personajes/{name} {
       allow read: if true;
       allow create: if request.resource.data.keys().hasAll(['pinHash','claimedAt'])
@@ -30,5 +63,3 @@ service cloud.firestore {
                     && request.resource.data.who is string;
       allow update, delete: if false;
     }
-  }
-}
