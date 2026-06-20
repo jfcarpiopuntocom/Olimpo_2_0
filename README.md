@@ -1,6 +1,6 @@
 # Olimpo 2.0
 
-Smoke shop → centro cultural. Cuenca, Ecuador.
+Centro cultural y asociación civil. Cuenca, Ecuador.
 
 Sitio v1.0: mobile-first, sin frameworks. Ver [SPEC.md](SPEC.md) para arquitectura de los microsistemas (auth de avatares, chatbot, radio, admin).
 

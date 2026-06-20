@@ -1,6 +1,6 @@
 # Olimpo 2.0 — Spec v1.0
 
-Local esquinero, 3 niveles, semiescalera conecta todo. Smoke shop → centro cultural.
+Local esquinero, 3 niveles, semiescalera conecta todo. Centro cultural y asociación civil.
 - **Sótano:** barra de jugos/café, peliculas, conferencias
 - **Calle:** camisetas + pinturas de autores cuencanos/amigos
 - **Arriba:** oficina privada de Jose (propietario)
