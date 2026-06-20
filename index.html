@@ -172,6 +172,33 @@ main{max-width:720px;margin:0 auto;padding:18px}
 }
 .radio-genre.active{background:rgba(232,160,32,0.18);box-shadow:0 0 0 2px var(--gold) inset}
 
+/* ---- pin modal ---- */
+.pin-overlay{
+  position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.78);
+  display:none;align-items:center;justify-content:center;padding:18px;
+}
+.pin-overlay.show{display:flex}
+.pin-box{
+  background:var(--bg2);border:1px solid var(--gold);border-radius:12px;
+  padding:22px;max-width:380px;width:100%;
+}
+.pin-box h3{font-size:1.05rem;margin-bottom:4px;color:var(--gold) !important;-webkit-text-fill-color:var(--gold) !important}
+.pin-box p{font-family:Arial,sans-serif;font-size:.85rem;color:var(--text2) !important;-webkit-text-fill-color:var(--text2) !important;margin-bottom:14px}
+.pin-slots{display:flex;gap:10px;justify-content:center;margin-bottom:16px}
+.pin-slot{
+  width:46px;height:46px;border:2px solid var(--jade);border-radius:8px;
+  display:flex;align-items:center;justify-content:center;font-size:1.4rem;background:var(--bg3);
+}
+.pin-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:16px}
+.pin-emoji{
+  min-height:40px;font-size:1.25rem;background:var(--bg3);border:1px solid rgba(232,160,32,.3);
+  border-radius:8px;cursor:pointer;
+}
+.pin-emoji:active{transform:scale(.92)}
+.pin-actions{display:flex;gap:8px}
+.pin-error{font-family:Arial,sans-serif;font-size:.82rem;color:var(--ember) !important;-webkit-text-fill-color:var(--ember) !important;margin-bottom:10px;min-height:1.2em}
+.pin-cancel{background:transparent;border:1px solid var(--text3);color:var(--text2) !important;-webkit-text-fill-color:var(--text2) !important}
+
 footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;color:var(--text3) !important;-webkit-text-fill-color:var(--text3) !important;font-size:.82rem}
 </style>
 </head>
@@ -207,7 +234,7 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
       <input id="msgInput" type="text" maxlength="180" placeholder="Deja un mensaje al club…">
       <button class="btn" id="msgSend">Enviar</button>
     </div>
-    <p class="hint">Mensajes guardados en este navegador (v1.0). v1.1: tablero compartido en tiempo real para todo el club, vía Firebase.</p>
+    <p class="hint">Tablero en vivo para todo el club, vía Firebase. Toca tu personaje arriba antes de escribir.</p>
   </div>
 
 </main>
@@ -231,104 +258,212 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
 
 <audio id="radioAudio" preload="none"></audio>
 
-<script>
+<div class="pin-overlay" id="pinOverlay">
+  <div class="pin-box">
+    <h3 id="pinTitle">Crea tu PIN</h3>
+    <p id="pinSub">Elige 3 símbolos, en orden. Es tu llave — nadie más puede ser tú sin ella.</p>
+    <div class="pin-error" id="pinError"></div>
+    <div class="pin-slots">
+      <div class="pin-slot" id="pinSlot0"></div>
+      <div class="pin-slot" id="pinSlot1"></div>
+      <div class="pin-slot" id="pinSlot2"></div>
+    </div>
+    <div class="pin-grid" id="pinGrid"></div>
+    <div class="pin-actions">
+      <button class="btn pin-cancel" id="pinCancel">Cancelar</button>
+      <button class="btn" id="pinConfirm" style="flex:1">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
 /* ============================================================
-   Personajes del tablero — avatares vía DiceBear (open source,
-   licencia MIT, uso comercial libre, sin attribution requerida:
-   https://www.dicebear.com/licenses/). Estilo "adventurer" para
-   pinta neo-shamánica/futurista. Seed = nombre, así cada quien
-   tiene siempre el mismo avatar. Cada quien elige su personaje
-   al tocarlo; se guarda en localStorage de este navegador.
-   v1.1: Firebase + PIN de 3 emojis para que nadie suplante a nadie.
+   Olimpo — tablero + PIN de 3 símbolos + mensajes, en vivo vía
+   Firebase Firestore (proyecto compartido, colecciones con
+   prefijo olimpo_, ver firebase-config.js y firestore.rules).
+   Avatares: DiceBear (open source, MIT, uso comercial libre),
+   estilo "adventurer". Símbolos del PIN: set serio/synthwave,
+   no emoji infantiles — pensado para un club de 28-52 años.
    ============================================================ */
-(function(){
-  "use strict";
-  var CHARS = [
-    {name:"Jose", color:"E8A020", gender:"male"},
-    {name:"David", color:"28ECAA", gender:"male"},
-    {name:"Fer", color:"E86040", gender:"male"},
-    {name:"Mateo", color:"7C9CE8", gender:"male"},
-    {name:"Kevin", color:"D060E8", gender:"male"},
-    {name:"Matto", color:"E8D020", gender:"male"},
-    {name:"Mateo Tusisabes", color:"60C8E8", gender:"male"},
-    {name:"Juan", color:"E87090", gender:"male"},
-    {name:"Anahi", color:"90E860", gender:"female"},
-    {name:"Laura", color:"E89060", gender:"female"},
-    {name:"Maria", color:"A060E8", gender:"female"}
-  ];
-  var board = document.getElementById('board');
-  var whoami = document.getElementById('whoami');
-  var me = localStorage.getItem('olimpo_me') || null;
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  initializeFirestore, doc, getDoc, setDoc, updateDoc, serverTimestamp,
+  collection, addDoc, query, orderBy, limit, onSnapshot
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import { firebaseConfig } from "./firebase-config.js";
 
-  function avatarUrl(c){
-    return 'https://api.dicebear.com/9.x/adventurer/svg?seed='+encodeURIComponent(c.name)+
-      '&backgroundColor='+c.color+'&backgroundType=solid';
-  }
+const app = initializeApp(firebaseConfig);
+// auto-detect long-polling: algunos navegadores/redes (proxies, sandboxes,
+// ciertos móviles) bloquean el streaming WebChannel por defecto de Firestore;
+// esto cae a long-polling automáticamente sin penalizar a quien sí soporta streaming.
+const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
 
-  function render(){
-    board.innerHTML='';
-    CHARS.forEach(function(c){
-      var div = document.createElement('div');
-      div.className = 'char' + (me===c.name ? ' me' : '');
-      div.innerHTML =
-        '<img class="sprite" loading="lazy" alt="'+c.name+'" src="'+avatarUrl(c)+'">' +
-        '<div class="char-name">'+c.name+'</div>' +
-        '<div class="char-status">'+(me===c.name?'Eres tú':'en el club')+'</div>';
-      div.onclick = function(){
-        me = c.name;
-        localStorage.setItem('olimpo_me', me);
-        whoami.innerHTML = 'Estás jugando como <b>'+me+'</b>.';
-        render();
-      };
-      board.appendChild(div);
-    });
-    if(me) whoami.innerHTML = 'Estás jugando como <b>'+me+'</b>.';
-  }
-  render();
+const CHARS = [
+  {name:"Jose", color:"E8A020"},
+  {name:"David", color:"28ECAA"},
+  {name:"Fer", color:"E86040"},
+  {name:"Mateo", color:"7C9CE8"},
+  {name:"Kevin", color:"D060E8"},
+  {name:"Matto", color:"E8D020"},
+  {name:"Mateo Tusisabes", color:"60C8E8"},
+  {name:"Juan", color:"E87090"},
+  {name:"Anahi", color:"90E860"},
+  {name:"Laura", color:"E89060"},
+  {name:"Maria", color:"A060E8"}
+];
+// Set de símbolos para el PIN — alquímico/synthwave, serio, sin emoji infantiles.
+const PIN_SYMBOLS = ['⚡','🌙','🔥','💀','🗲','☄️','🌑','🩸','🖤','⚜️','♾️','🔱','🧿','🌌','🛸','🔺','⛓️','🌀'];
 
-  /* ---- mensajes del tablero (localStorage, demo v1.0) ---- */
-  var msglist = document.getElementById('msglist');
-  var msgInput = document.getElementById('msgInput');
-  var msgSend = document.getElementById('msgSend');
-  var KEY = 'olimpo_mensajes';
+const board = document.getElementById('board');
+const whoami = document.getElementById('whoami');
+const onlineCountEl = document.getElementById('onlineCount');
+let me = localStorage.getItem('olimpo_me') || null;
+let myPin = JSON.parse(localStorage.getItem('olimpo_pin') || 'null'); // array of indices, cached so we don't re-ask every visit
 
-  function loadMsgs(){
-    try{ return JSON.parse(localStorage.getItem(KEY)) || []; }catch(e){ return []; }
-  }
-  function saveMsgs(arr){ localStorage.setItem(KEY, JSON.stringify(arr.slice(-30))); }
-  function renderMsgs(){
-    var arr = loadMsgs();
-    if(!arr.length){ msglist.innerHTML = '<div class="msg-empty">Aún nadie ha dejado mensaje. Sé el primero.</div>'; return; }
-    msglist.innerHTML = arr.slice().reverse().map(function(m){
-      return '<div class="msg"><span class="when">'+m.time+'</span><span class="who">'+m.who+'</span>'+m.text+'</div>';
-    }).join('');
-  }
-  renderMsgs();
+function avatarUrl(c){
+  return 'https://api.dicebear.com/9.x/adventurer/svg?seed='+encodeURIComponent(c.name)+'&backgroundColor='+c.color+'&backgroundType=solid';
+}
 
-  function send(){
-    var text = msgInput.value.trim();
-    if(!text) return;
-    var who = me || 'Anónimo';
-    var arr = loadMsgs();
-    arr.push({who:who, text:text, time:new Date().toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit'})});
-    saveMsgs(arr);
-    msgInput.value='';
-    renderMsgs();
-  }
-  msgSend.onclick = send;
-  msgInput.addEventListener('keydown', function(e){ if(e.key==='Enter') send(); });
+async function sha256(str){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
 
-  /* ---- anuncios ---- */
-  fetch('ofertas.json').then(function(r){return r.json()}).then(function(d){
-    var box = document.getElementById('anuncios-list');
-    var html = '<div class="anuncio"><b>Hoy:</b> '+d.especial_del_dia+'</div>';
-    html += '<div class="anuncio"><b>Esta semana:</b> '+d.especial_de_la_semana+'</div>';
-    (d.novedades||[]).forEach(function(n){ html += '<div class="anuncio">'+n+'</div>'; });
-    box.innerHTML = html;
-  }).catch(function(){
-    document.getElementById('anuncios-list').innerHTML = '<div class="anuncio">No se pudieron cargar los anuncios.</div>';
+function renderBoard(){
+  board.innerHTML='';
+  CHARS.forEach(function(c){
+    const div = document.createElement('div');
+    div.className = 'char' + (me===c.name ? ' me' : '');
+    div.innerHTML =
+      '<img class="sprite" loading="lazy" alt="'+c.name+'" src="'+avatarUrl(c)+'">' +
+      '<div class="char-name">'+c.name+'</div>' +
+      '<div class="char-status">'+(me===c.name?'Eres tú':'en el club')+'</div>';
+    div.onclick = function(){ claimOrVerify(c.name); };
+    board.appendChild(div);
   });
-})();
+  if(me) whoami.innerHTML = 'Estás jugando como <b>'+me+'</b>.';
+}
+renderBoard();
+
+/* ---- modal de PIN ---- */
+const overlay = document.getElementById('pinOverlay');
+const pinTitle = document.getElementById('pinTitle');
+const pinSub = document.getElementById('pinSub');
+const pinError = document.getElementById('pinError');
+const pinGrid = document.getElementById('pinGrid');
+const pinSlots = [document.getElementById('pinSlot0'), document.getElementById('pinSlot1'), document.getElementById('pinSlot2')];
+let picked = [];
+
+PIN_SYMBOLS.forEach(function(sym){
+  const b = document.createElement('button');
+  b.className = 'pin-emoji'; b.type='button'; b.textContent = sym;
+  b.onclick = function(){
+    if(picked.length>=3) return;
+    picked.push(sym);
+    pinSlots[picked.length-1].textContent = sym;
+  };
+  pinGrid.appendChild(b);
+});
+
+function resetModal(){
+  picked = [];
+  pinSlots.forEach(function(s){ s.textContent=''; });
+  pinError.textContent='';
+}
+function closeModal(){ overlay.classList.remove('show'); resetModal(); }
+document.getElementById('pinCancel').onclick = closeModal;
+
+async function claimOrVerify(name){
+  pendingName = name;
+  resetModal();
+  const ref = doc(db, 'olimpo_personajes', name);
+  const snap = await getDoc(ref);
+  if(snap.exists()){
+    pendingMode = 'verify';
+    pinTitle.textContent = 'Ingresa tu PIN';
+    pinSub.textContent = name + ' ya tiene PIN. Ingresa tus 3 símbolos en orden.';
+  } else {
+    pendingMode = 'create';
+    pinTitle.textContent = 'Crea tu PIN';
+    pinSub.textContent = 'Eres el primero en jugar como ' + name + '. Elige 3 símbolos, en orden — es tu llave.';
+  }
+  overlay.classList.add('show');
+}
+let pendingName=null, pendingMode=null;
+
+document.getElementById('pinConfirm').onclick = async function(){
+  if(picked.length<3){ pinError.textContent='Elige 3 símbolos.'; return; }
+  const hash = await sha256(picked.join('|'));
+  const ref = doc(db, 'olimpo_personajes', pendingName);
+  try{
+    if(pendingMode==='create'){
+      await setDoc(ref, { pinHash: hash, claimedAt: serverTimestamp(), lastSeen: serverTimestamp() });
+    } else {
+      const snap = await getDoc(ref);
+      if(!snap.exists() || snap.data().pinHash !== hash){
+        pinError.textContent = 'PIN incorrecto. Ese personaje ya es alguien más.';
+        return;
+      }
+      await updateDoc(ref, { lastSeen: serverTimestamp() });
+    }
+    me = pendingName;
+    localStorage.setItem('olimpo_me', me);
+    localStorage.setItem('olimpo_pin', JSON.stringify(picked));
+    closeModal();
+    renderBoard();
+  }catch(e){
+    pinError.textContent = 'Error de conexión con Firebase. Intenta de nuevo.';
+  }
+};
+
+/* ---- cuántos personajes ya fueron reclamados ---- */
+onSnapshot(collection(db,'olimpo_personajes'), function(snap){
+  onlineCountEl.textContent = snap.size + '/' + CHARS.length;
+});
+
+/* ---- mensajes del tablero, en vivo para todo el club ---- */
+const msglist = document.getElementById('msglist');
+const msgInput = document.getElementById('msgInput');
+const msgSend = document.getElementById('msgSend');
+const msgsQuery = query(collection(db,'olimpo_mensajes'), orderBy('ts','desc'), limit(40));
+
+onSnapshot(msgsQuery, function(snap){
+  if(snap.empty){ msglist.innerHTML = '<div class="msg-empty">Aún nadie ha dejado mensaje. Sé el primero.</div>'; return; }
+  let html='';
+  snap.forEach(function(d){
+    const m = d.data();
+    const when = m.ts && m.ts.toDate ? m.ts.toDate().toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit'}) : '...';
+    html += '<div class="msg"><span class="when">'+when+'</span><span class="who">'+m.who+'</span>'+m.text+'</div>';
+  });
+  msglist.innerHTML = html;
+}, function(){
+  msglist.innerHTML = '<div class="msg-empty">No se pudo conectar al tablero en vivo.</div>';
+});
+
+async function send(){
+  const text = msgInput.value.trim();
+  if(!text) return;
+  if(!me){ alert('Primero toca tu personaje en el tablero y crea tu PIN.'); return; }
+  msgInput.value='';
+  try{
+    await addDoc(collection(db,'olimpo_mensajes'), { who: me, text: text, ts: serverTimestamp() });
+  }catch(e){
+    alert('No se pudo enviar. Revisa tu conexión.');
+  }
+}
+msgSend.onclick = send;
+msgInput.addEventListener('keydown', function(e){ if(e.key==='Enter') send(); });
+
+/* ---- anuncios ---- */
+fetch('ofertas.json').then(function(r){return r.json()}).then(function(d){
+  const box = document.getElementById('anuncios-list');
+  let html = '<div class="anuncio"><b>Hoy:</b> '+d.especial_del_dia+'</div>';
+  html += '<div class="anuncio"><b>Esta semana:</b> '+d.especial_de_la_semana+'</div>';
+  (d.novedades||[]).forEach(function(n){ html += '<div class="anuncio">'+n+'</div>'; });
+  box.innerHTML = html;
+}).catch(function(){
+  document.getElementById('anuncios-list').innerHTML = '<div class="anuncio">No se pudieron cargar los anuncios.</div>';
+});
 </script>
 
 <script>
