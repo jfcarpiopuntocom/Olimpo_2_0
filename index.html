@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light only">
+<meta name="supported-color-schemes" content="light">
+<meta name="theme-color" content="#0B0A12">
+<title>Olimpo 2.0 — Cuenca</title>
+<meta name="description" content="Olimpo 2.0: smoke shop y centro cultural en Cuenca. Café, arte, conferencias y club.">
+
+<meta property="og:title" content="Olimpo 2.0">
+<meta property="og:description" content="Smoke shop → centro cultural. Café, arte, conferencias, club. Cuenca, Ecuador.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://raw.githubusercontent.com/jfcarpiopuntocom/Olimpo_2_0/main/photo_1_2026-06-20_14-28-03.jpg">
+
+<style>
+:root{
+  color-scheme: light only;
+  forced-color-adjust: none;
+  --bg:#0B0A12;
+  --bg2:#15121F;
+  --gold:#E8A020;
+  --ember:#E86040;
+  --jade:#28ECAA;
+  --text:#FFFFFF;
+  --text2:#CCCCCC;
+  --text3:#999999;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{
+  background:var(--bg);
+  color:var(--text) !important;
+  -webkit-text-fill-color:var(--text) !important;
+  font-family:'Cinzel',Georgia,'Times New Roman',serif;
+  min-height:100vh;
+  min-height:100svh;
+  overflow-x:hidden;
+}
+@media (prefers-reduced-motion: reduce){
+  *{animation:none !important;transition:none !important}
+}
+h1,h2,h3,p,li,a,span,em,strong,blockquote,figcaption,time,button,label{
+  color:inherit !important;
+  -webkit-text-fill-color:inherit !important;
+}
+@media (prefers-color-scheme: dark){
+  html,body,h1,h2,h3,p,li,a,span,em,strong,blockquote,figcaption,time,button,label{
+    color:var(--text) !important;
+    -webkit-text-fill-color:var(--text) !important;
+    background-color:var(--bg);
+  }
+}
+
+body{
+  background:
+    radial-gradient(ellipse at 20% 0%, rgba(232,160,32,0.10), transparent 50%),
+    radial-gradient(ellipse at 80% 100%, rgba(40,236,170,0.08), transparent 50%),
+    var(--bg);
+}
+
+/* ---- nav ---- */
+header{
+  position:sticky;top:0;z-index:50;
+  background:var(--bg2);
+  border-bottom:2px solid var(--gold);
+  padding:14px 16px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.wordmark{
+  font-size:1.3rem;
+  letter-spacing:.04em;
+  color:var(--gold) !important;
+  -webkit-text-fill-color:var(--gold) !important;
+  font-weight:700;
+}
+.wordmark span{color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important;}
+nav{display:flex;gap:18px;font-family:Arial,sans-serif;font-size:.95rem}
+nav a{text-decoration:none;font-weight:600;min-height:44px;display:flex;align-items:center}
+
+/* ---- hero ---- */
+.hero{position:relative;min-height:78vh;display:flex;align-items:flex-end}
+.hero img{
+  position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
+  filter:saturate(1.05) contrast(1.05);
+}
+.hero::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(180deg, rgba(11,10,18,0.15) 0%, rgba(11,10,18,0.55) 55%, rgba(11,10,18,0.95) 100%);
+}
+.hero-content{position:relative;z-index:2;padding:24px 20px 32px;width:100%}
+.eyebrow{
+  font-family:Arial,sans-serif;font-size:.85rem;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important;font-weight:700;
+}
+.hero h1{
+  font-size:clamp(2.2rem, 9vw, 4rem);
+  font-size:2.2rem;
+  font-size:clamp(2.2rem, 9vw, 4rem);
+  line-height:1.05;margin:10px 0 14px;
+  text-shadow:0 2px 18px rgba(0,0,0,.6);
+}
+.hero p{font-family:Arial,sans-serif;font-size:1.05rem;color:var(--text2) !important;-webkit-text-fill-color:var(--text2) !important;max-width:480px}
+
+/* ---- sections ---- */
+section{padding:56px 18px;max-width:880px;margin:0 auto}
+.section-tag{
+  font-family:Arial,sans-serif;font-size:.82rem;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ember) !important;-webkit-text-fill-color:var(--ember) !important;font-weight:700;margin-bottom:8px;
+}
+h2{font-size:clamp(1.6rem,6vw,2.4rem);margin-bottom:18px}
+.lede{font-family:Arial,sans-serif;color:var(--text2) !important;-webkit-text-fill-color:var(--text2) !important;font-size:1.05rem;line-height:1.6;max-width:640px}
+
+.niveles{display:grid;grid-template-columns:1fr;gap:16px;margin-top:24px}
+@media(min-width:680px){.niveles{grid-template-columns:repeat(3,1fr)}}
+.nivel-card{
+  background:var(--bg2);border:1px solid rgba(232,160,32,0.35);border-radius:14px;padding:22px;
+  position:relative;overflow:hidden;
+}
+.nivel-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--gold),var(--jade))}
+.nivel-num{font-family:Arial,sans-serif;font-size:.82rem;color:var(--text3) !important;-webkit-text-fill-color:var(--text3) !important;letter-spacing:.08em;text-transform:uppercase;font-weight:700}
+.nivel-card h3{font-size:1.3rem;margin:8px 0 10px;color:var(--gold) !important;-webkit-text-fill-color:var(--gold) !important}
+.nivel-card p{font-family:Arial,sans-serif;color:var(--text2) !important;-webkit-text-fill-color:var(--text2) !important;font-size:.98rem;line-height:1.55}
+
+.galeria{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:24px}
+@media(min-width:680px){.galeria{grid-template-columns:repeat(3,1fr)}}
+.galeria img{width:100%;height:200px;object-fit:cover;border-radius:10px;border:1px solid rgba(40,236,170,.25)}
+
+/* ---- ofertas ---- */
+.ofertas-box{
+  background:linear-gradient(135deg, rgba(232,160,32,0.12), rgba(40,236,170,0.08));
+  border:1px solid var(--gold);border-radius:14px;padding:24px;margin-top:20px;
+}
+.ofertas-box h3{color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important;font-size:1.1rem;margin-bottom:6px}
+.ofertas-box p{font-family:Arial,sans-serif;color:var(--text2) !important;-webkit-text-fill-color:var(--text2) !important}
+
+/* ---- tablero placeholder ---- */
+.tablero-box{
+  background:var(--bg2);border:2px dashed rgba(40,236,170,.4);border-radius:14px;
+  padding:30px 20px;text-align:center;margin-top:20px;
+}
+.tablero-box p{font-family:Arial,sans-serif;color:var(--text3) !important;-webkit-text-fill-color:var(--text3) !important;font-size:.95rem;margin-top:8px}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 22px;
+  background:var(--gold);color:#0B0A12 !important;-webkit-text-fill-color:#0B0A12 !important;
+  border:none;border-radius:8px;font-family:Arial,sans-serif;font-weight:700;font-size:1rem;
+  text-decoration:none;cursor:pointer;
+}
+
+/* ---- radio ---- */
+.radio-bar{
+  position:fixed;bottom:0;left:0;right:0;z-index:60;
+  background:var(--bg2);border-top:2px solid var(--jade);
+  padding:10px 14px;display:flex;align-items:center;gap:12px;
+  font-family:Arial,sans-serif;
+}
+.radio-bar button{
+  min-width:44px;min-height:44px;border-radius:50%;border:1px solid var(--gold);
+  background:transparent;color:var(--gold) !important;-webkit-text-fill-color:var(--gold) !important;
+  font-size:1.2rem;cursor:pointer;
+}
+.radio-track{font-size:.85rem;color:var(--text2) !important;-webkit-text-fill-color:var(--text2) !important;flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.radio-label{font-size:.82rem;color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important;font-weight:700;letter-spacing:.06em}
+
+footer{padding:90px 18px 40px;text-align:center;font-family:Arial,sans-serif;color:var(--text3) !important;-webkit-text-fill-color:var(--text3) !important;font-size:.88rem}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wordmark">OLIMPO <span>2.0</span></div>
+  <nav>
+    <a href="#niveles">Niveles</a>
+    <a href="#ofertas">Ofertas</a>
+    <a href="#tablero">Club</a>
+  </nav>
+</header>
+
+<div class="hero">
+  <img src="photo_1_2026-06-20_14-28-03.jpg" alt="Vista de Cuenca desde Olimpo">
+  <div class="hero-content">
+    <div class="eyebrow">Smoke Shop · Centro Cultural</div>
+    <h1>Olimpo 2.0</h1>
+    <p>Tres niveles, una sola comunidad. Café y jugos en el sótano, arte y cultura cuencana en la calle, y la energía que conecta todo en una sola semiescalera.</p>
+  </div>
+</div>
+
+<section id="niveles">
+  <div class="section-tag">El espacio</div>
+  <h2>Tres niveles, una semiescalera</h2>
+  <p class="lede">Local esquinero que transiciona de smoke shop a centro cultural sin perder el alma del barrio.</p>
+  <div class="niveles">
+    <div class="nivel-card">
+      <div class="nivel-num">Sótano</div>
+      <h3>Barra & Cine</h3>
+      <p>Jugos y café de especialidad, proyecciones de películas, conferencias y charlas. El nivel para sentarse y quedarse.</p>
+    </div>
+    <div class="nivel-card">
+      <div class="nivel-num">Calle</div>
+      <h3>Arte & Ropa</h3>
+      <p>Camisetas y pinturas de autores cuencanos y amigos del club. La vitrina viva de la escena local.</p>
+    </div>
+    <div class="nivel-card">
+      <div class="nivel-num">Arriba</div>
+      <h3>Oficina de Jose</h3>
+      <p>El cuartel general del propietario. Mural neón-shamánico, mesa de mezcla, y la mirada que cuida todo el local.</p>
+    </div>
+  </div>
+</section>
+
+<section id="galeria">
+  <div class="section-tag">El mural</div>
+  <h2>Ancestral · Grecorromano · Futurista</h2>
+  <p class="lede">La identidad visual de Olimpo: raíz ancestral, columna grecorromana, filo futurista. Trascendente ante todo.</p>
+  <div class="galeria">
+    <img src="photo_2_2026-06-20_14-28-03.jpg" alt="Mural neón Olimpo">
+    <img src="photo_4_2026-06-20_14-28-03.jpg" alt="Mural neón Olimpo detalle">
+    <img src="photo_3_2026-06-20_14-28-03.jpg" alt="Ajedrez en Olimpo">
+    <img src="photo_5_2026-06-20_14-28-03.jpg" alt="Noche en Olimpo">
+  </div>
+</section>
+
+<section id="ofertas">
+  <div class="section-tag">Hoy en Olimpo</div>
+  <h2>Novedades & Especiales</h2>
+  <div class="ofertas-box" id="ofertas-box">
+    <h3>Cargando especial del día…</h3>
+    <p>Pregunta en barra mientras tanto.</p>
+  </div>
+</section>
+
+<section id="tablero">
+  <div class="section-tag">El club</div>
+  <h2>Tablero de personajes</h2>
+  <p class="lede">Crea tu personaje, deja mensajes, coordina el club de la vida real. Próximamente: autenticación con tu PIN de 3 emojis, sin contraseñas, sin suplantación.</p>
+  <div class="tablero-box">
+    <p>🜂 🜁 🜃 — el tablero llega en v1.1</p>
+    <a class="btn" href="#" onclick="alert('Tablero de personajes: próximamente. Pregunta a Jose por el lanzamiento.');return false;">Avísenme</a>
+  </div>
+</section>
+
+<!-- TAWK.TO WIDGET — Jose pega aquí su script cuando cree su cuenta gratis en tawk.to -->
+
+<footer>
+  Olimpo 2.0 · Cuenca, Ecuador
+</footer>
+
+<div class="radio-bar">
+  <button id="radioToggle" aria-label="Play/Pause radio">▶</button>
+  <div>
+    <div class="radio-label">RADIO OLIMPO</div>
+    <div class="radio-track" id="radioTrack">Toca play — Progressive House</div>
+  </div>
+</div>
+
+<audio id="radioAudio" preload="none"></audio>
+
+<script>
+(function(){
+  var tracks = [
+    { name: "Progressive House", src: "audio/progressive-house.mp3" },
+    { name: "Electronica 70s", src: "audio/electronica-70s.mp3" },
+    { name: "Progressive Lounge", src: "audio/progressive-lounge.mp3" },
+    { name: "Burning Man Soundtrack", src: "audio/burning-man.mp3" }
+  ];
+  var i = 0;
+  var audio = document.getElementById('radioAudio');
+  var btn = document.getElementById('radioToggle');
+  var label = document.getElementById('radioTrack');
+  var playing = false;
+
+  function load(idx){
+    audio.src = tracks[idx].src;
+    label.textContent = tracks[idx].name;
+  }
+  load(i);
+
+  btn.addEventListener('click', function(){
+    if(!playing){
+      audio.play().catch(function(){ label.textContent = tracks[i].name + " (sube los mp3 a /audio)"; });
+      btn.textContent = '❚❚';
+      playing = true;
+    } else {
+      audio.pause();
+      btn.textContent = '▶';
+      playing = false;
+    }
+  });
+
+  audio.addEventListener('ended', function(){
+    i = (i+1) % tracks.length;
+    load(i);
+    audio.play();
+  });
+
+  fetch('ofertas.json').then(function(r){return r.json()}).then(function(d){
+    var box = document.getElementById('ofertas-box');
+    var html = '<h3>' + d.especial_del_dia + '</h3><p>' + d.especial_de_la_semana + '</p>';
+    if(d.novedades && d.novedades.length){
+      html += '<p style="margin-top:10px">' + d.novedades.join(' · ') + '</p>';
+    }
+    box.innerHTML = html;
+  }).catch(function(){});
+})();
+</script>
+
+</body>
+</html>
