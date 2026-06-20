@@ -161,6 +161,13 @@ h2{font-size:clamp(1.6rem,6vw,2.4rem);margin-bottom:18px}
 }
 .radio-track{font-size:.85rem;color:var(--text2) !important;-webkit-text-fill-color:var(--text2) !important;flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .radio-label{font-size:.82rem;color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important;font-weight:700;letter-spacing:.06em}
+.radio-genres{display:flex;gap:8px;flex-wrap:wrap}
+.radio-genre{
+  font-size:.82rem;font-weight:700;padding:8px 10px;border-radius:8px;border:1px solid var(--gold);
+  background:transparent;color:var(--gold) !important;-webkit-text-fill-color:var(--gold) !important;
+  font-family:Arial,sans-serif;cursor:pointer;min-height:44px;
+}
+.radio-genre.active{background:rgba(232,160,32,0.18);box-shadow:0 0 0 2px var(--gold) inset}
 
 footer{padding:90px 18px 40px;text-align:center;font-family:Arial,sans-serif;color:var(--text3) !important;-webkit-text-fill-color:var(--text3) !important;font-size:.88rem}
 </style>
@@ -246,51 +253,94 @@ footer{padding:90px 18px 40px;text-align:center;font-family:Arial,sans-serif;col
 </footer>
 
 <div class="radio-bar">
-  <button id="radioToggle" aria-label="Play/Pause radio">▶</button>
-  <div>
+  <div style="flex:1">
     <div class="radio-label">RADIO OLIMPO</div>
-    <div class="radio-track" id="radioTrack">Toca play — Progressive House</div>
+    <div class="radio-track" id="radioTrack">Elige una emisora</div>
+  </div>
+  <div class="radio-genres">
+    <button class="radio-genre" data-genre="progressive_house">House</button>
+    <button class="radio-genre" data-genre="electronica_70s">70s</button>
+    <button class="radio-genre" data-genre="progressive_lounge">Lounge</button>
+    <button class="radio-genre" data-genre="burning_man">Playa</button>
   </div>
 </div>
 
 <audio id="radioAudio" preload="none"></audio>
 
 <script>
+/* Radio Olimpo: emisoras online en vivo (radio-browser.info, gratis, sin auth),
+   mismo patron que ajedrez-16bit. Sin mp3 que subir; streams pinned como
+   backup/respaldo primero, luego fallback por tag en el directorio. */
 (function(){
-  var tracks = [
-    { name: "Progressive House", src: "audio/progressive-house.mp3" },
-    { name: "Electronica 70s", src: "audio/electronica-70s.mp3" },
-    { name: "Progressive Lounge", src: "audio/progressive-lounge.mp3" },
-    { name: "Burning Man Soundtrack", src: "audio/burning-man.mp3" }
-  ];
-  var i = 0;
-  var audio = document.getElementById('radioAudio');
-  var btn = document.getElementById('radioToggle');
-  var label = document.getElementById('radioTrack');
-  var playing = false;
+  "use strict";
+  var RADIO_API='https://de1.api.radio-browser.info';
+  var RADIO_PINNED={
+    progressive_house:['https://ice1.somafm.com/beatblender-128-mp3'],
+    electronica_70s:['https://ice1.somafm.com/dronezone-128-mp3'],
+    progressive_lounge:['https://ice1.somafm.com/groovesalad-128-mp3'],
+    burning_man:['https://ice1.somafm.com/deepspaceone-128-mp3']
+  };
+  var RADIO_TAGS={
+    progressive_house:['progressive house','progressive trance','deep house'],
+    electronica_70s:['kosmische','krautrock','synth'],
+    progressive_lounge:['lounge','chillout','downtempo'],
+    burning_man:['psybient','tribal house','desert']
+  };
+  var RADIO_NAMES={
+    progressive_house:['progressive house'],
+    electronica_70s:['tangerine dream'],
+    progressive_lounge:['lounge'],
+    burning_man:['playa']
+  };
+  var LABELS={
+    progressive_house:'Progressive House',
+    electronica_70s:'Electrónica 70s',
+    progressive_lounge:'Progressive Lounge',
+    burning_man:'Burning Man / Playa'
+  };
 
-  function load(idx){
-    audio.src = tracks[idx].src;
-    label.textContent = tracks[idx].name;
-  }
-  load(i);
-
-  btn.addEventListener('click', function(){
-    if(!playing){
-      audio.play().catch(function(){ label.textContent = tracks[i].name + " (sube los mp3 a /audio)"; });
-      btn.textContent = '❚❚';
-      playing = true;
-    } else {
-      audio.pause();
-      btn.textContent = '▶';
-      playing = false;
+  async function fetchCandidates(genre){
+    var urls=[], seen={};
+    (RADIO_PINNED[genre]||[]).forEach(function(u){ if(!seen[u]){ seen[u]=1; urls.push(u); } });
+    var tags=RADIO_TAGS[genre]||[], names=RADIO_NAMES[genre]||[];
+    for(var i=0;i<tags.length && urls.length<5;i++){
+      try{
+        var r=await fetch(RADIO_API+'/json/stations/search?tag='+encodeURIComponent(tags[i])+'&limit=8&hidebroken=true&order=clickcount&reverse=true');
+        var arr=await r.json();
+        arr.forEach(function(st){ var u=st.url_resolved||st.url; if(u && !seen[u] && st.lastcheckok!==0){ seen[u]=1; urls.push(u); } });
+      }catch(e){}
     }
-  });
+    for(var j=0;j<names.length && urls.length<5;j++){
+      try{
+        var r2=await fetch(RADIO_API+'/json/stations/search?name='+encodeURIComponent(names[j])+'&limit=8&hidebroken=true');
+        var arr2=await r2.json();
+        arr2.forEach(function(st){ var u=st.url_resolved||st.url; if(u && !seen[u] && st.lastcheckok!==0){ seen[u]=1; urls.push(u); } });
+      }catch(e){}
+    }
+    return urls;
+  }
 
-  audio.addEventListener('ended', function(){
-    i = (i+1) % tracks.length;
-    load(i);
-    audio.play();
+  function tryPlayCandidates(urls,idx,trackEl,btn){
+    if(idx>=urls.length){ trackEl.textContent='No se encontró señal, intenta otra'; btn.classList.remove('active'); return; }
+    var player=document.getElementById('radioAudio');
+    player.onerror=function(){ tryPlayCandidates(urls,idx+1,trackEl,btn); };
+    player.src=urls[idx]; player.volume=0.5;
+    player.play().then(function(){ trackEl.textContent='▶ ' + LABELS[btn.dataset.genre]; })
+      .catch(function(){ tryPlayCandidates(urls,idx+1,trackEl,btn); });
+  }
+
+  function playRadio(genre,btn){
+    var trackEl=document.getElementById('radioTrack');
+    document.querySelectorAll('.radio-genre').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active'); trackEl.textContent='Buscando emisora…';
+    fetchCandidates(genre).then(function(urls){
+      if(!urls.length){ trackEl.textContent='No se encontró señal, intenta otra'; btn.classList.remove('active'); return; }
+      tryPlayCandidates(urls,0,trackEl,btn);
+    }).catch(function(){ trackEl.textContent='Error de conexión'; btn.classList.remove('active'); });
+  }
+
+  document.querySelectorAll('.radio-genre').forEach(function(b){
+    b.onclick=function(){ playRadio(b.dataset.genre,b); };
   });
 
   fetch('ofertas.json').then(function(r){return r.json()}).then(function(d){

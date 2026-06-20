@@ -12,4 +12,5 @@ Sitio v1.0: mobile-first, sin frameworks. Ver [SPEC.md](SPEC.md) para arquitectu
 ## Pendiente v1.1
 - Firebase (auth PIN 3 emojis + tablero de personajes)
 - Widget tawk.to (chatbot)
-- 4 mp3 de radio en `/audio/`
+
+Radio: ya implementada, 4 emisoras en vivo (sin archivos que subir). Ver [SPEC.md](SPEC.md).
