@@ -94,11 +94,19 @@ header{
 .cursor{display:inline-block;width:9px;height:1.1em;background:var(--jade);vertical-align:text-bottom;animation:blink 1s steps(1) infinite}
 @keyframes blink{50%{opacity:0}}
 
-main{max-width:720px;margin:0 auto;padding:18px}
+main.console{max-width:1280px;margin:0 auto;padding:14px;display:flex;flex-direction:column;gap:14px}
+.club-main{flex:1;min-width:0}
+.club-sidebar{display:flex;flex-direction:column;gap:14px;min-width:0}
+/* mobile-first: el tablero (el club) va primero, todo en una columna */
+@media(min-width:980px){
+  main.console{flex-direction:row;align-items:flex-start}
+  .club-main{flex:1.6}
+  .club-sidebar{flex:1;max-height:calc(100vh - 140px);overflow-y:auto;padding-right:4px}
+}
 
 .panel{
   background:var(--bg2);border:1px solid rgba(232,160,32,.35);border-radius:10px;
-  padding:16px;margin-bottom:18px;
+  padding:16px;
 }
 .panel-title{
   font-size:.82rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;
@@ -183,16 +191,21 @@ main{max-width:720px;margin:0 auto;padding:18px}
 .radio-bar{
   position:fixed;bottom:0;left:0;right:0;z-index:60;
   background:var(--bg2);border-top:2px solid var(--jade);
-  padding:8px 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:6px 10px;display:flex;align-items:center;gap:8px;
+  flex-wrap:nowrap;overflow-x:auto;white-space:nowrap;
   font-family:Arial,sans-serif;
 }
-.radio-track{font-size:.8rem;color:var(--text2) !important;-webkit-text-fill-color:var(--text2) !important;flex:1 1 100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-.radio-label{font-size:.78rem;color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important;font-weight:700;letter-spacing:.06em}
-.radio-genres{display:flex;gap:6px;flex-wrap:wrap;flex:1}
+.radio-track{
+  font-size:.74rem;color:var(--text2) !important;-webkit-text-fill-color:var(--text2) !important;
+  overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+  flex:0 1 90px;min-width:0;
+}
+.radio-label{font-size:.74rem;color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important;font-weight:700;letter-spacing:.04em;flex:0 0 auto}
+.radio-genres{display:flex;gap:5px;flex-wrap:nowrap;flex:0 0 auto}
 .radio-genre{
-  font-size:.78rem;font-weight:700;padding:7px 9px;border-radius:8px;border:1px solid var(--gold);
+  font-size:.72rem;font-weight:700;padding:6px 8px;border-radius:7px;border:1px solid var(--gold);
   background:transparent;color:var(--gold) !important;-webkit-text-fill-color:var(--gold) !important;
-  font-family:Arial,sans-serif;cursor:pointer;min-height:40px;
+  font-family:Arial,sans-serif;cursor:pointer;min-height:36px;flex:0 0 auto;white-space:nowrap;
 }
 .radio-genre.active{background:rgba(232,160,32,0.18);box-shadow:0 0 0 2px var(--gold) inset}
 
@@ -246,49 +259,53 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
   <p>Esto no es una página. Es la consola del club.<br>A donde vienes cuando extrañas a tu gente del Olimpo<span class="cursor"></span></p>
 </div>
 
-<main>
+<main class="console">
 
-  <div class="panel" id="mensajes-panel">
-    <div class="panel-title">Di algo al club</div>
-    <div class="msg-form">
-      <input id="msgInput" type="text" maxlength="80" placeholder="Tu mensaje aparece sobre tu personaje…">
-      <button class="btn" id="msgSend">Decir</button>
-    </div>
-    <p class="hint">Tu mensaje queda flotando sobre tu personaje en el tablero hasta que escribas otro. Toca tu personaje arriba antes de escribir.</p>
-  </div>
-
-  <div class="panel" id="mostrador-panel">
-    <div class="panel-title">El Mostrador</div>
-    <div id="anuncios-list"><div class="anuncio">Cargando especiales…</div></div>
-    <p class="hint">Atiende Jose. Pronto: chatbot 24/7 aquí mismo para pedidos y preguntas.</p>
-    <div class="msg-form" style="margin-top:14px">
-      <input id="dmInput" type="text" maxlength="300" placeholder="Escríbele en privado al Mostrador…">
-      <button class="btn" id="dmSend">Enviar</button>
-    </div>
-    <p class="hint">Privado, cifrado de extremo a extremo — solo lo leen Jose y el staff que él designe. Toca tu personaje arriba antes de escribir.</p>
-    <div id="dmInbox" style="display:none;margin-top:14px">
-      <div class="panel-title" style="margin-bottom:8px">Bandeja del Mostrador</div>
-      <div class="msglist" id="dmList"></div>
-    </div>
-  </div>
-
-  <div class="panel" id="tablero-panel">
+  <div class="panel club-main" id="tablero-panel">
     <div class="panel-title">Tablero · ¿Quién eres?</div>
     <div class="whoami" id="whoami">Toca tu personaje para entrar al club.</div>
     <div class="board" id="board"></div>
   </div>
 
-  <div class="panel" id="eventos-panel">
-    <div class="panel-title">Anuncios del club</div>
-    <div id="eventos-list"><div class="anuncio">Cargando…</div></div>
-  </div>
+  <aside class="club-sidebar">
 
-  <div class="panel" id="confianza-panel">
-    <div class="panel-title">Confidencialidad y control total del usuario</div>
-    <p class="trust-text">Olimpo 2.0 es un espacio para actividades culturales y educativas alrededor de plantas maestras: café, charlas, cine, arte y comunidad.</p>
-    <p class="trust-text">Tu PIN nunca se guarda como texto — deriva una llave criptográfica que solo vive en tu navegador. Ni Jose ni nadie del club puede ver ni recuperar tu PIN. Jose solo puede <b>liberar</b> un personaje si pierdes acceso.</p>
-    <p class="trust-text">No pedimos ni guardamos tu nombre real. Elige cualquier nickname tocando "+ Nuevo" en el tablero — eso es lo único que queda registrado.</p>
-  </div>
+    <div class="panel" id="mensajes-panel">
+      <div class="panel-title">Di algo al club</div>
+      <div class="msg-form">
+        <input id="msgInput" type="text" maxlength="80" placeholder="Tu mensaje aparece sobre tu personaje…">
+        <button class="btn" id="msgSend">Decir</button>
+      </div>
+      <p class="hint">Tu mensaje queda flotando sobre tu personaje en el tablero hasta que escribas otro. Toca tu personaje arriba antes de escribir.</p>
+    </div>
+
+    <div class="panel" id="mostrador-panel">
+      <div class="panel-title">El Mostrador</div>
+      <div id="anuncios-list"><div class="anuncio">Cargando especiales…</div></div>
+      <p class="hint">Atiende Jose. Pronto: chatbot 24/7 aquí mismo para pedidos y preguntas.</p>
+      <div class="msg-form" style="margin-top:14px">
+        <input id="dmInput" type="text" maxlength="300" placeholder="Escríbele en privado al Mostrador…">
+        <button class="btn" id="dmSend">Enviar</button>
+      </div>
+      <p class="hint">Privado, cifrado de extremo a extremo — solo lo leen Jose y el staff que él designe. Toca tu personaje arriba antes de escribir.</p>
+      <div id="dmInbox" style="display:none;margin-top:14px">
+        <div class="panel-title" style="margin-bottom:8px">Bandeja del Mostrador</div>
+        <div class="msglist" id="dmList"></div>
+      </div>
+    </div>
+
+    <div class="panel" id="eventos-panel">
+      <div class="panel-title">Anuncios del club</div>
+      <div id="eventos-list"><div class="anuncio">Cargando…</div></div>
+    </div>
+
+    <div class="panel" id="confianza-panel">
+      <div class="panel-title">Confidencialidad y control total del usuario</div>
+      <p class="trust-text">Olimpo 2.0 es un espacio para actividades culturales y educativas alrededor de plantas maestras: café, charlas, cine, arte y comunidad.</p>
+      <p class="trust-text">Tu PIN nunca se guarda como texto — deriva una llave criptográfica que solo vive en tu navegador. Ni Jose ni nadie del club puede ver ni recuperar tu PIN. Jose solo puede <b>liberar</b> un personaje si pierdes acceso.</p>
+      <p class="trust-text">No pedimos ni guardamos tu nombre real. Elige cualquier nickname tocando "+ Nuevo" en el tablero — eso es lo único que queda registrado.</p>
+    </div>
+
+  </aside>
 
 </main>
 
