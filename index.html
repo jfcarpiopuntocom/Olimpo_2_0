@@ -312,7 +312,8 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
 <!-- TAWK.TO WIDGET — Jose pega aquí su script cuando cree su cuenta gratis en tawk.to -->
 
 <footer>
-  Olimpo 2.0 · Cuenca, Ecuador
+  <img src="avatars/pelusa.png" alt="Pelusa" style="width:34px;height:34px;vertical-align:middle;margin-right:6px">
+  Pelusa cuida el club · Olimpo 2.0 · Cuenca, Ecuador
 </footer>
 
 <div class="radio-bar">
@@ -509,22 +510,27 @@ let personajesData = {}; // existencia/roles, vía Firestore — solo identidad,
 let bubbles = JSON.parse(localStorage.getItem('olimpo_bubbles') || '{}'); // {nombre:{text,ts}} — vía P2P, nunca toca servidor
 function saveBubbles(){ localStorage.setItem('olimpo_bubbles', JSON.stringify(bubbles)); }
 
-// Avatares cyborg reales: 8 diseños provistos por JFC (avatars/cy1..cy8.png),
-// mitad humano / mitad máquina, fondo transparente. Solo 2 de los 8 leen
-// como mujer (cy4, cy5) — los 11 fundadores se asignan a mano respetando
-// género donde el nombre lo indica; los nicknames nuevos ciclan por hash
-// entre los 8 (no hay forma de saber el género de un nickname libre).
+// Avatares cyborg reales del "Club Cyborg Roster" provisto por JFC
+// (avatars/*.png, fondo transparente) — 11 diseños únicos (3 leen como
+// mujer: cyborg02, cyborg04, cyborg06), mapeados 1:1 a los 11 fundadores
+// respetando género donde el nombre lo indica. Solo Jose y Juan comparten
+// diseño ("mascot") por quedar 8 hombres y solo 7 diseños masculinos/neutros
+// disponibles. Pelusa (avatars/pelusa.png) es la perrita de Jose — mascota
+// del club, no un personaje jugable (no tiene PIN). Nicknames nuevos ciclan
+// por hash entre los 10 diseños humanos (sin Pelusa).
+const HUMAN_AVATARS = ['mascot','cyborg02','cyborg03','cyborg04','cyborg05','cyborg06','cyborg07','cyborg08','cyborg09','cyborg10'];
 const FOUNDER_AVATAR = {
-  'Jose':1, 'David':2, 'Fer':3, 'Mateo':6, 'Kevin':7, 'Matto':8,
-  'Mateo Tusisabes':2, 'Juan':3, 'Anahi':4, 'Laura':5, 'Maria':4
+  'Jose':'mascot', 'David':'cyborg03', 'Fer':'cyborg05', 'Mateo':'cyborg07',
+  'Kevin':'cyborg08', 'Matto':'cyborg09', 'Mateo Tusisabes':'cyborg10', 'Juan':'mascot',
+  'Anahi':'cyborg02', 'Laura':'cyborg04', 'Maria':'cyborg06'
 };
 function seedNum(name){
   let h=0; for(let i=0;i<name.length;i++){ h=(h*31+name.charCodeAt(i))>>>0; }
   return h;
 }
 function avatarUrl(c){
-  const n = FOUNDER_AVATAR[c.name] || (seedNum(c.name) % 8) + 1;
-  return 'avatars/cy' + n + '.png';
+  const f = FOUNDER_AVATAR[c.name] || HUMAN_AVATARS[seedNum(c.name) % HUMAN_AVATARS.length];
+  return 'avatars/' + f + '.png';
 }
 
 const ESC_MAP = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'};
