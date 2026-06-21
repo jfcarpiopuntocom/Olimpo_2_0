@@ -154,6 +154,9 @@ main{max-width:720px;margin:0 auto;padding:18px}
   cursor:pointer;
 }
 .hint{font-family:Arial,sans-serif;font-size:.78rem;color:var(--text3) !important;-webkit-text-fill-color:var(--text3) !important;margin-top:8px}
+.trust-text{font-family:Arial,sans-serif;font-size:.85rem;line-height:1.6;color:var(--text2) !important;-webkit-text-fill-color:var(--text2) !important;margin-bottom:10px}
+.trust-text:last-child{margin-bottom:0}
+.trust-text b{color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important}
 
 /* ---- radio ---- */
 .radio-bar{
@@ -196,7 +199,7 @@ main{max-width:720px;margin:0 auto;padding:18px}
   color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important;
 }
 .pin-mode.active{background:rgba(40,236,170,.18);box-shadow:0 0 0 2px var(--jade) inset}
-.pin-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:16px}
+.pin-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:16px}
 .pin-emoji{
   min-height:40px;font-size:1.25rem;background:var(--bg3);border:1px solid rgba(232,160,32,.3);
   border-radius:8px;cursor:pointer;
@@ -242,6 +245,12 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
       <button class="btn" id="msgSend">Enviar</button>
     </div>
     <p class="hint">Tablero en vivo para todo el club, vía Firebase. Toca tu personaje arriba antes de escribir.</p>
+  </div>
+
+  <div class="panel" id="confianza-panel">
+    <div class="panel-title">Confianza y legalidad</div>
+    <p class="trust-text">Olimpo 2.0 es un espacio para actividades legales y educativas alrededor de plantas maestras: café, charlas, cine, arte y comunidad. Nada aquí es asesoría médica ni promueve actividad ilegal.</p>
+    <p class="trust-text">Tu PIN nunca se guarda como texto — solo su huella criptográfica (hash). Ni Jose ni nadie del club puede ver tu PIN. Jose solo puede <b>liberar</b> un personaje si pierdes acceso; no puede leer ni recuperar tu llave.</p>
   </div>
 
 </main>
@@ -306,10 +315,11 @@ import {
 import { firebaseConfig } from "./firebase-config.js";
 
 const app = initializeApp(firebaseConfig);
-// auto-detect long-polling: algunos navegadores/redes (proxies, sandboxes,
-// ciertos móviles) bloquean el streaming WebChannel por defecto de Firestore;
-// esto cae a long-polling automáticamente sin penalizar a quien sí soporta streaming.
-const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
+// Forzado a long-polling: el selector de personaje no abría en redes
+// móviles/celulares — el streaming WebChannel por defecto de Firestore
+// se cuelga en bastantes redes de datos y proxies. Long-polling forzado
+// es un poco más lento pero confiable en todas las redes, mobile incluido.
+const db = initializeFirestore(app, { experimentalForceLongPolling: true });
 
 const CHARS = [
   {name:"Jose", color:"E8A020"},
@@ -325,7 +335,11 @@ const CHARS = [
   {name:"Maria", color:"A060E8"}
 ];
 // Set de símbolos para el PIN — alquímico/synthwave, serio, sin emoji infantiles.
-const PIN_SYMBOLS = ['⚡','🌙','🔥','💀','🗲','☄️','🌑','🩸','🖤','⚜️','♾️','🔱','🧿','🌌','🛸','🔺','⛓️','🌀'];
+// Exactamente 10 símbolos — cada uno corresponde 1:1 a un dígito (0-9) por su
+// posición, así "elige 3 emojis" y "elige 3 dígitos" son la MISMA llave, no
+// dos credenciales distintas. Al crear el PIN con emojis te mostramos el
+// código numérico equivalente como respaldo para anotar.
+const PIN_SYMBOLS = ['⚡','🌙','🔥','💀','☄️','🩸','🖤','🔱','🌌','🔺'];
 
 const board = document.getElementById('board');
 const whoami = document.getElementById('whoami');
@@ -375,14 +389,14 @@ let pinMode = 'emoji';
 
 function buildGrid(mode){
   pinGrid.innerHTML='';
-  const items = mode==='emoji' ? PIN_SYMBOLS : DIGITS;
-  items.forEach(function(sym){
+  const labels = mode==='emoji' ? PIN_SYMBOLS : DIGITS;
+  labels.forEach(function(label, idx){
     const b = document.createElement('button');
-    b.className = 'pin-emoji'; b.type='button'; b.textContent = sym;
+    b.className = 'pin-emoji'; b.type='button'; b.textContent = label;
     b.onclick = function(){
       if(picked.length>=3) return;
-      picked.push(sym);
-      pinSlots[picked.length-1].textContent = sym;
+      picked.push(idx); // guardamos el ÍNDICE, no el símbolo — así emoji y dígito son la misma llave
+      pinSlots[picked.length-1].textContent = label;
     };
     pinGrid.appendChild(b);
   });
@@ -413,38 +427,64 @@ function resetModal(){
 function closeModal(){ overlay.classList.remove('show'); resetModal(); }
 document.getElementById('pinCancel').onclick = closeModal;
 
+function withTimeout(promise, ms){
+  return Promise.race([
+    promise,
+    new Promise(function(_, reject){ setTimeout(function(){ reject(new Error('timeout')); }, ms); })
+  ]);
+}
+
 async function claimOrVerify(name){
   pendingName = name;
   resetModal();
-  const ref = doc(db, 'olimpo_personajes', name);
-  const snap = await getDoc(ref);
-  if(snap.exists()){
-    pendingMode = 'verify';
-    pinTitle.textContent = 'Ingresa tu PIN';
-    pinSub.textContent = name + ' ya tiene PIN. Ingresa tus 3 símbolos en orden.';
-  } else {
-    pendingMode = 'create';
-    pinTitle.textContent = 'Crea tu PIN';
-    pinSub.textContent = 'Eres el primero en jugar como ' + name + '. Elige 3 símbolos, en orden — es tu llave.';
-  }
+  // Abrimos el modal YA, con estado de carga visible — antes el modal solo
+  // aparecía después de que Firestore respondiera, y en redes móviles lentas
+  // eso podía tardar tanto que parecía que el botón "no hacía nada".
+  pinTitle.textContent = 'Conectando…';
+  pinSub.textContent = 'Un momento.';
   overlay.classList.add('show');
+  try{
+    const ref = doc(db, 'olimpo_personajes', name);
+    const snap = await withTimeout(getDoc(ref), 9000);
+    if(snap.exists()){
+      pendingMode = 'verify';
+      pinTitle.textContent = 'Ingresa tu PIN';
+      pinSub.textContent = name + ' ya tiene PIN. Ingresa tus 3 símbolos en orden.';
+    } else {
+      pendingMode = 'create';
+      pinTitle.textContent = 'Crea tu PIN';
+      pinSub.textContent = 'Eres el primero en jugar como ' + name + '. Elige 3 símbolos, en orden — es tu llave.';
+    }
+  }catch(e){
+    pinTitle.textContent = 'Sin conexión';
+    pinSub.textContent = 'No se pudo conectar. Revisa tu internet y vuelve a tocar tu personaje.';
+  }
 }
 let pendingName=null, pendingMode=null;
 
 document.getElementById('pinConfirm').onclick = async function(){
+  if(!pendingMode){ pinError.textContent='Aún no se confirma la conexión. Espera un momento.'; return; }
   if(picked.length<3){ pinError.textContent='Elige 3 símbolos.'; return; }
-  const hash = await sha256(picked.join('|'));
+  const hash = await sha256(picked.join('|')); // hash sobre ÍNDICES: emoji o dígito producen la misma llave
   const ref = doc(db, 'olimpo_personajes', pendingName);
   try{
     if(pendingMode==='create'){
-      await setDoc(ref, { pinHash: hash, claimedAt: serverTimestamp(), lastSeen: serverTimestamp() });
+      await withTimeout(setDoc(ref, { pinHash: hash, claimedAt: serverTimestamp(), lastSeen: serverTimestamp() }), 9000);
+      var codigo = picked.join('-');
+      me = pendingName;
+      localStorage.setItem('olimpo_me', me);
+      localStorage.setItem('olimpo_pin', JSON.stringify(picked));
+      closeModal();
+      renderBoard();
+      alert('Listo. Tu código de respaldo es ' + codigo + ' — anótalo. Sirve igual que tus emojis para volver a entrar como ' + pendingName + '.');
+      return;
     } else {
-      const snap = await getDoc(ref);
+      const snap = await withTimeout(getDoc(ref), 9000);
       if(!snap.exists() || snap.data().pinHash !== hash){
         pinError.textContent = 'PIN incorrecto. Ese personaje ya es alguien más.';
         return;
       }
-      await updateDoc(ref, { lastSeen: serverTimestamp() });
+      await withTimeout(updateDoc(ref, { lastSeen: serverTimestamp() }), 9000);
     }
     me = pendingName;
     localStorage.setItem('olimpo_me', me);
