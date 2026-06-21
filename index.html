@@ -208,6 +208,7 @@ main.console{max-width:1280px;margin:0 auto;padding:14px;display:flex;flex-direc
   font-family:Arial,sans-serif;cursor:pointer;min-height:36px;flex:0 0 auto;white-space:nowrap;
 }
 .radio-genre.active{background:rgba(232,160,32,0.18);box-shadow:0 0 0 2px var(--gold) inset}
+.radio-genre:disabled{border-color:var(--text3);color:var(--text3) !important;-webkit-text-fill-color:var(--text3) !important;cursor:not-allowed}
 
 /* ---- pin modal ---- */
 .pin-overlay{
@@ -324,6 +325,7 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
     <button class="radio-genre" data-genre="electronica_70s">70s</button>
     <button class="radio-genre" data-genre="progressive_lounge">Lounge</button>
     <button class="radio-genre" data-genre="burning_man">Playa</button>
+    <button class="radio-genre" id="radioOlimpo" disabled title="Próximamente: mezclas de los DJs del club">DJs Olimpo (pronto)</button>
     <button class="radio-genre" id="radioStop">■ Stop</button>
   </div>
 </div>
