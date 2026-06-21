@@ -108,9 +108,11 @@ main{max-width:720px;margin:0 auto;padding:18px}
 /* ---- board / characters ---- */
 .board{
   display:grid;grid-template-columns:repeat(3,1fr);gap:10px;
+  padding-top:34px; /* deja aire arriba para que las burbujas de la fila 1 no se corten */
 }
 @media(min-width:480px){.board{grid-template-columns:repeat(4,1fr)}}
 .char{
+  position:relative;
   background:var(--bg3);border:2px solid transparent;border-radius:10px;
   padding:10px 6px;text-align:center;cursor:pointer;min-height:44px;
   transition:border-color .15s, transform .15s;
@@ -125,6 +127,25 @@ main{max-width:720px;margin:0 auto;padding:18px}
 }
 .char-name{font-size:.78rem;color:var(--text2) !important;-webkit-text-fill-color:var(--text2) !important;font-weight:700;word-break:break-word}
 .char-status{font-size:.68rem;color:var(--text3) !important;-webkit-text-fill-color:var(--text3) !important;margin-top:2px}
+.char-new{display:flex;flex-direction:column;align-items:center;justify-content:center}
+.char-new .sprite{display:flex;align-items:center;justify-content:center;font-size:1.6rem;border-style:dashed;color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important}
+
+/* ---- burbuja de diálogo sobre el personaje (reemplaza el chat tipo lista) ---- */
+.bubble{
+  position:absolute;bottom:100%;left:50%;transform:translateX(-50%);
+  margin-bottom:9px;width:max-content;max-width:150px;
+  background:var(--jade);border-radius:12px;border-bottom-left-radius:3px;
+  padding:7px 10px;font-family:Arial,sans-serif;font-size:.74rem;font-weight:700;line-height:1.3;
+  color:#0B0A12 !important;-webkit-text-fill-color:#0B0A12 !important;
+  box-shadow:0 6px 18px rgba(0,0,0,.45);
+  word-break:break-word;z-index:6;
+  animation:bubbleIn .2s ease-out;
+}
+.bubble::after{
+  content:'';position:absolute;top:100%;left:14px;
+  border:6px solid transparent;border-top-color:var(--jade);
+}
+@keyframes bubbleIn{from{opacity:0;transform:translateX(-50%) translateY(4px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
 
 .whoami{font-family:Arial,sans-serif;font-size:.9rem;color:var(--text2) !important;-webkit-text-fill-color:var(--text2) !important;margin-bottom:12px}
 .whoami b{color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important}
@@ -238,19 +259,19 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
   </div>
 
   <div class="panel" id="mensajes-panel">
-    <div class="panel-title">Mensajes en el tablero</div>
-    <div class="msglist" id="msglist"></div>
+    <div class="panel-title">Di algo al club</div>
     <div class="msg-form">
-      <input id="msgInput" type="text" maxlength="180" placeholder="Deja un mensaje al club…">
-      <button class="btn" id="msgSend">Enviar</button>
+      <input id="msgInput" type="text" maxlength="80" placeholder="Tu mensaje aparece sobre tu personaje…">
+      <button class="btn" id="msgSend">Decir</button>
     </div>
-    <p class="hint">Tablero en vivo para todo el club, vía Firebase. Toca tu personaje arriba antes de escribir.</p>
+    <p class="hint">Tu mensaje queda flotando sobre tu personaje en el tablero hasta que escribas otro. Toca tu personaje arriba antes de escribir.</p>
   </div>
 
   <div class="panel" id="confianza-panel">
     <div class="panel-title">Confianza y legalidad</div>
     <p class="trust-text">Olimpo 2.0 es un espacio para actividades legales y educativas alrededor de plantas maestras: café, charlas, cine, arte y comunidad. Nada aquí es asesoría médica ni promueve actividad ilegal.</p>
     <p class="trust-text">Tu PIN nunca se guarda como texto — solo su huella criptográfica (hash). Ni Jose ni nadie del club puede ver tu PIN. Jose solo puede <b>liberar</b> un personaje si pierdes acceso; no puede leer ni recuperar tu llave.</p>
+    <p class="trust-text">No pedimos ni guardamos tu nombre real. Elige cualquier nickname tocando "+ Nuevo" en el tablero — eso es lo único que queda registrado.</p>
   </div>
 
 </main>
@@ -298,19 +319,36 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
   </div>
 </div>
 
+<div class="pin-overlay" id="nickOverlay">
+  <div class="pin-box">
+    <h3>Crea tu personaje</h3>
+    <p>Elige un nickname. No pedimos tu nombre real — esto es lo único que queda guardado.</p>
+    <div class="pin-error" id="nickError"></div>
+    <input id="nickInput" type="text" maxlength="20" placeholder="Tu nickname"
+      style="width:100%;min-height:44px;background:var(--bg3);border:1px solid var(--gold);border-radius:8px;padding:0 12px;font-family:Arial,sans-serif;font-size:1rem;color:var(--text);margin-bottom:16px">
+    <div class="pin-actions">
+      <button class="btn pin-cancel" id="nickCancel">Cancelar</button>
+      <button class="btn" id="nickConfirm" style="flex:1">Siguiente</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
 /* ============================================================
-   Olimpo — tablero + PIN de 3 símbolos + mensajes, en vivo vía
-   Firebase Firestore (proyecto compartido, colecciones con
-   prefijo olimpo_, ver firebase-config.js y firestore.rules).
-   Avatares: DiceBear (open source, MIT, uso comercial libre),
-   estilo "adventurer". Símbolos del PIN: set serio/synthwave,
-   no emoji infantiles — pensado para un club de 28-52 años.
+   Olimpo — tablero vivo + PIN de 3 símbolos + burbujas de
+   diálogo, vía Firebase Firestore (proyecto compartido,
+   colecciones con prefijo olimpo_, ver firebase-config.js y
+   firestore.rules). Avatares: DiceBear "bottts-neutral" (robots,
+   sin caras de muñeco), gafas/visores fijados a variantes serias
+   ("rave anonymous"). Símbolos del PIN: set serio/synthwave.
+   Jose (admin del tablero) entra con un código de activación
+   inicial y de inmediato elige su PIN definitivo — el código de
+   activación deja de servir en cuanto lo hace.
    ============================================================ */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import {
   initializeFirestore, doc, getDoc, setDoc, updateDoc, serverTimestamp,
-  collection, addDoc, query, orderBy, limit, onSnapshot
+  collection, addDoc, onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
@@ -320,6 +358,9 @@ const app = initializeApp(firebaseConfig);
 // se cuelga en bastantes redes de datos y proxies. Long-polling forzado
 // es un poco más lento pero confiable en todas las redes, mobile incluido.
 const db = initializeFirestore(app, { experimentalForceLongPolling: true });
+
+const ADMIN_NAME = 'Jose'; // único personaje con flujo de activación admin
+const ADMIN_SEED = [0,0,0]; // ⚡⚡⚡ — código de activación inicial, solo sirve una vez
 
 const CHARS = [
   {name:"Jose", color:"E8A020"},
@@ -334,6 +375,12 @@ const CHARS = [
   {name:"Laura", color:"E89060"},
   {name:"Maria", color:"A060E8"}
 ];
+const PALETTE = ['E8A020','28ECAA','E86040','7C9CE8','D060E8','E8D020','60C8E8','E87090','90E860','E89060','A060E8','60E8C8','E860A0','C8E860'];
+function colorFromName(name){
+  let h=0;
+  for(let i=0;i<name.length;i++){ h=(h*31+name.charCodeAt(i))>>>0; }
+  return PALETTE[h % PALETTE.length];
+}
 // Set de símbolos para el PIN — alquímico/synthwave, serio, sin emoji infantiles.
 // Exactamente 10 símbolos — cada uno corresponde 1:1 a un dígito (0-9) por su
 // posición, así "elige 3 emojis" y "elige 3 dígitos" son la MISMA llave, no
@@ -345,10 +392,15 @@ const board = document.getElementById('board');
 const whoami = document.getElementById('whoami');
 const onlineCountEl = document.getElementById('onlineCount');
 let me = localStorage.getItem('olimpo_me') || null;
-let myPin = JSON.parse(localStorage.getItem('olimpo_pin') || 'null'); // array of indices, cached so we don't re-ask every visit
+let personajesData = {}; // doc completo de cada personaje, en vivo — alimenta avatares extra + burbujas
 
 function avatarUrl(c){
-  return 'https://api.dicebear.com/9.x/bottts-neutral/svg?seed='+encodeURIComponent(c.name)+'&backgroundColor='+c.color+'&backgroundType=solid';
+  // gafas/visores serios (sensor, robocop, glow, frame, shade) — nada de ojos
+  // tiernos/redondos/corazones, que se veían infantiles para un club de adultos.
+  return 'https://api.dicebear.com/9.x/bottts-neutral/svg?seed='+encodeURIComponent(c.name)+
+    '&backgroundColor='+c.color+'&backgroundType=solid'+
+    '&eyes='+encodeURIComponent('frame1,frame2,glow,robocop,sensor,shade01')+
+    '&mouth='+encodeURIComponent('diagram,grill01,grill02,grill03,square01,square02');
 }
 
 async function sha256(str){
@@ -356,21 +408,67 @@ async function sha256(str){
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
 
+const ESC_MAP = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'};
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, function(c){ return ESC_MAP[c]; });
+}
+
 function renderBoard(){
   board.innerHTML='';
-  CHARS.forEach(function(c){
+  const extraNames = Object.keys(personajesData)
+    .filter(function(n){ return !CHARS.some(function(c){ return c.name===n; }); })
+    .sort();
+  const all = CHARS.concat(extraNames.map(function(n){ return {name:n, color:colorFromName(n)}; }));
+
+  all.forEach(function(c){
+    const data = personajesData[c.name];
+    const safeName = escapeHtml(c.name);
     const div = document.createElement('div');
     div.className = 'char' + (me===c.name ? ' me' : '');
+    const bubble = (data && data.lastMsg) ? '<div class="bubble">'+escapeHtml(data.lastMsg)+'</div>' : '';
     div.innerHTML =
-      '<img class="sprite" loading="lazy" alt="'+c.name+'" src="'+avatarUrl(c)+'">' +
-      '<div class="char-name">'+c.name+'</div>' +
+      bubble +
+      '<img class="sprite" loading="lazy" alt="'+safeName+'" src="'+avatarUrl(c)+'">' +
+      '<div class="char-name">'+safeName+'</div>' +
       '<div class="char-status">'+(me===c.name?'Eres tú':'en el club')+'</div>';
     div.onclick = function(){ claimOrVerify(c.name); };
     board.appendChild(div);
   });
+
+  const newDiv = document.createElement('div');
+  newDiv.className = 'char char-new';
+  newDiv.innerHTML = '<div class="sprite">+</div><div class="char-name">Nuevo</div><div class="char-status">crea tu nickname</div>';
+  newDiv.onclick = function(){ openNickModal(); };
+  board.appendChild(newDiv);
+
   if(me) whoami.innerHTML = 'Estás jugando como <b>'+me+'</b>.';
 }
 renderBoard();
+
+/* ---- modal de nickname (crear personaje propio, sin nombre real) ---- */
+const nickOverlay = document.getElementById('nickOverlay');
+const nickInput = document.getElementById('nickInput');
+const nickError = document.getElementById('nickError');
+function openNickModal(){
+  nickInput.value='';
+  nickError.textContent='';
+  nickOverlay.classList.add('show');
+  setTimeout(function(){ nickInput.focus(); }, 50);
+}
+function closeNickModal(){ nickOverlay.classList.remove('show'); }
+document.getElementById('nickCancel').onclick = closeNickModal;
+document.getElementById('nickConfirm').onclick = function(){
+  const nick = nickInput.value.trim();
+  if(nick.length<2 || nick.length>20){ nickError.textContent='Entre 2 y 20 caracteres.'; return; }
+  if(nick.indexOf('/')!==-1){ nickError.textContent='Sin "/" en el nickname.'; return; }
+  if(CHARS.some(function(c){ return c.name.toLowerCase()===nick.toLowerCase() && c.name!==nick; })){
+    nickError.textContent='Ese nombre ya es de un personaje del tablero — tócalo arriba en vez de crear uno nuevo.';
+    return;
+  }
+  closeNickModal();
+  claimOrVerify(nick);
+};
+nickInput.addEventListener('keydown', function(e){ if(e.key==='Enter') document.getElementById('nickConfirm').click(); });
 
 /* ---- modal de PIN: dos métodos a elección — 3 emojis o 3 dígitos.
    Cualquiera de los dos sirve como llave completa (se hashea igual);
@@ -427,6 +525,11 @@ function resetModal(){
 function closeModal(){ overlay.classList.remove('show'); resetModal(); }
 document.getElementById('pinCancel').onclick = closeModal;
 
+function clearPicked(){
+  picked = [];
+  pinSlots.forEach(function(s){ s.textContent=''; });
+}
+
 function withTimeout(promise, ms){
   return Promise.race([
     promise,
@@ -436,6 +539,7 @@ function withTimeout(promise, ms){
 
 async function claimOrVerify(name){
   pendingName = name;
+  pendingIsOwnerSetup = false; // cada intento empieza limpio — evita que un setup de admin cancelado a medias se filtre a otro personaje
   resetModal();
   // Abrimos el modal YA, con estado de carga visible — antes el modal solo
   // aparecía después de que Firestore respondiera, y en redes móviles lentas
@@ -450,6 +554,14 @@ async function claimOrVerify(name){
       pendingMode = 'verify';
       pinTitle.textContent = 'Ingresa tu PIN';
       pinSub.textContent = name + ' ya tiene PIN. Ingresa tus 3 símbolos en orden.';
+    } else if(name === ADMIN_NAME){
+      // Jose es el admin del tablero: para activar su personaje por primera
+      // vez hace falta el código de activación (dado por el equipo), no
+      // cualquier PIN libre como el resto. En cuanto lo activa, elige su PIN
+      // definitivo y el código de activación deja de tener uso.
+      pendingMode = 'admin-seed';
+      pinTitle.textContent = 'Activar panel de Jose';
+      pinSub.textContent = 'Ingresa el código de activación inicial (te lo dimos aparte). Luego eliges tu PIN definitivo.';
     } else {
       pendingMode = 'create';
       pinTitle.textContent = 'Crea tu PIN';
@@ -460,28 +572,48 @@ async function claimOrVerify(name){
     pinSub.textContent = 'No se pudo conectar. Revisa tu internet y vuelve a tocar tu personaje.';
   }
 }
-let pendingName=null, pendingMode=null;
+let pendingName=null, pendingMode=null, pendingIsOwnerSetup=false;
 
 document.getElementById('pinConfirm').onclick = async function(){
   if(!pendingMode){ pinError.textContent='Aún no se confirma la conexión. Espera un momento.'; return; }
   if(picked.length<3){ pinError.textContent='Elige 3 símbolos.'; return; }
+
+  if(pendingMode==='admin-seed'){
+    if(picked.join('|') !== ADMIN_SEED.join('|')){
+      pinError.textContent = 'Código de activación incorrecto.';
+      clearPicked();
+      return;
+    }
+    pendingIsOwnerSetup = true;
+    pendingMode = 'create';
+    clearPicked();
+    pinError.textContent='';
+    pinTitle.textContent = 'Elige tu PIN definitivo';
+    pinSub.textContent = 'Activado. Ahora elige los 3 símbolos que serán tu llave de admin — el código de activación ya no sirve.';
+    return;
+  }
+
   const hash = await sha256(picked.join('|')); // hash sobre ÍNDICES: emoji o dígito producen la misma llave
   const ref = doc(db, 'olimpo_personajes', pendingName);
   try{
     if(pendingMode==='create'){
-      await withTimeout(setDoc(ref, { pinHash: hash, claimedAt: serverTimestamp(), lastSeen: serverTimestamp() }), 9000);
+      const docData = { pinHash: hash, claimedAt: serverTimestamp(), lastSeen: serverTimestamp(), role: pendingIsOwnerSetup ? 'owner' : 'member' };
+      await withTimeout(setDoc(ref, docData), 9000);
       var codigo = picked.join('-');
+      var wasOwnerSetup = pendingIsOwnerSetup;
+      pendingIsOwnerSetup = false;
       me = pendingName;
       localStorage.setItem('olimpo_me', me);
       localStorage.setItem('olimpo_pin', JSON.stringify(picked));
       closeModal();
       renderBoard();
-      alert('Listo. Tu código de respaldo es ' + codigo + ' — anótalo. Sirve igual que tus emojis para volver a entrar como ' + pendingName + '.');
+      alert((wasOwnerSetup ? 'Panel de Jose activado. ' : 'Listo. ') + 'Tu código de respaldo es ' + codigo + ' — anótalo. Sirve igual que tus emojis para volver a entrar como ' + pendingName + '.');
       return;
     } else {
       const snap = await withTimeout(getDoc(ref), 9000);
       if(!snap.exists() || snap.data().pinHash !== hash){
         pinError.textContent = 'PIN incorrecto. Ese personaje ya es alguien más.';
+        clearPicked();
         return;
       }
       await withTimeout(updateDoc(ref, { lastSeen: serverTimestamp() }), 9000);
@@ -496,29 +628,19 @@ document.getElementById('pinConfirm').onclick = async function(){
   }
 };
 
-/* ---- cuántos personajes ya fueron reclamados ---- */
+/* ---- personajes en vivo: alimenta el conteo, los avatares extra (nicknames)
+   y las burbujas de diálogo sobre cada personaje. Sustituye el chat tipo
+   lista: tu mensaje queda flotando sobre tu avatar hasta que escribas otro. ---- */
 onSnapshot(collection(db,'olimpo_personajes'), function(snap){
-  onlineCountEl.textContent = snap.size + '/' + CHARS.length;
+  const data = {};
+  snap.forEach(function(d){ data[d.id] = d.data(); });
+  personajesData = data;
+  onlineCountEl.textContent = String(snap.size); // el sufijo " en el club" ya está en el HTML del pill
+  renderBoard();
 });
 
-/* ---- mensajes del tablero, en vivo para todo el club ---- */
-const msglist = document.getElementById('msglist');
 const msgInput = document.getElementById('msgInput');
 const msgSend = document.getElementById('msgSend');
-const msgsQuery = query(collection(db,'olimpo_mensajes'), orderBy('ts','desc'), limit(40));
-
-onSnapshot(msgsQuery, function(snap){
-  if(snap.empty){ msglist.innerHTML = '<div class="msg-empty">Aún nadie ha dejado mensaje. Sé el primero.</div>'; return; }
-  let html='';
-  snap.forEach(function(d){
-    const m = d.data();
-    const when = m.ts && m.ts.toDate ? m.ts.toDate().toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit'}) : '...';
-    html += '<div class="msg"><span class="when">'+when+'</span><span class="who">'+m.who+'</span>'+m.text+'</div>';
-  });
-  msglist.innerHTML = html;
-}, function(){
-  msglist.innerHTML = '<div class="msg-empty">No se pudo conectar al tablero en vivo.</div>';
-});
 
 async function send(){
   const text = msgInput.value.trim();
@@ -526,7 +648,9 @@ async function send(){
   if(!me){ alert('Primero toca tu personaje en el tablero y crea tu PIN.'); return; }
   msgInput.value='';
   try{
-    await addDoc(collection(db,'olimpo_mensajes'), { who: me, text: text, ts: serverTimestamp() });
+    const ref = doc(db, 'olimpo_personajes', me);
+    await withTimeout(updateDoc(ref, { lastMsg: text, lastMsgAt: serverTimestamp() }), 9000);
+    await addDoc(collection(db,'olimpo_mensajes'), { who: me, text: text, ts: serverTimestamp() }); // historial completo, no se borra
   }catch(e){
     alert('No se pudo enviar. Revisa tu conexión.');
   }
