@@ -433,6 +433,18 @@ async function deriveSecretKey(name, digits){
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('olimpo-v1|'+name+'|'+digits.join('-')));
   return new Uint8Array(buf);
 }
+// Reset de desarrollo: el claim original de "Jose" quedó tomado durante
+// pruebas de esta sesión con un PIN aleatorio que nunca se guardó — el José
+// real no podría reclamarlo (no es su PIN y no hay forma de rotarlo sin la
+// llave vieja). Se cambia su namespace de claim para que vuelva a verse
+// "libre" y el flujo de activación (⚡⚡⚡) funcione fresco para él. No afecta
+// a Juan ni a nadie más. Quitar este caso especial no hace falta nunca —
+// es inofensivo dejarlo, simplemente nadie vuelve a tocar el namespace viejo.
+function claimTag(name){
+  if(name === 'Jose') return 'olimpo-claim-Jose-v2';
+  return 'olimpo-claim-' + name;
+}
+
 // Rotación de PIN: el dueño actual puede firmar, con su llave VIEJA, un
 // evento que diga "ahora soy esta llave NUEVA" (content.supersededBy). Solo
 // quien tiene la llave vieja puede producir esa firma — nadie más puede
@@ -440,7 +452,7 @@ async function deriveSecretKey(name, digits){
 // sigue la cadena: primer claim manda, y desde ahí sigue cada sucesión
 // firmada por la pubkey vigente hasta la más reciente.
 async function getCanonicalClaim(name){
-  const events = await withTimeout(pool.querySync(RELAYS, { kinds:[30078], '#d':['olimpo-claim-'+name], limit:50 }), 9000);
+  const events = await withTimeout(pool.querySync(RELAYS, { kinds:[30078], '#d':[claimTag(name)], limit:50 }), 9000);
   if(!events.length) return null;
   events.sort(function(a,b){ return a.created_at-b.created_at; }); // el más antiguo manda — primer claim, gana
   // Nostr ya colapsa el historial: dos eventos del MISMO pubkey+kind+d-tag no
@@ -753,7 +765,7 @@ document.getElementById('pinConfirm').onclick = async function(){
       const role = pendingStaffRole || 'member';
       const tmpl = {
         kind: 30078, created_at: Math.floor(Date.now()/1000),
-        tags: [['d','olimpo-claim-'+pendingName]], content: JSON.stringify({ role: role })
+        tags: [['d',claimTag(pendingName)]], content: JSON.stringify({ role: role })
       };
       const signed = finalizeEvent(tmpl, secretKey);
       await withTimeout(Promise.any(pool.publish(RELAYS, signed)), 9000); // basta con que UN relé lo acepte
@@ -873,6 +885,16 @@ msgInput.addEventListener('keydown', function(e){ if(e.key==='Enter') send(); })
 
 /* ---- al cargar, recuperamos los últimos mensajes del club desde los
    relés de Nostr (quien no estuvo conectado P2P se pone al día igual). ---- */
+// Mensajes de prueba publicados durante el desarrollo de esta sesión — se
+// excluyen de la burbuja para que no aparezcan como si el club ya tuviera
+// actividad real. No hace falta tocar esto nunca más: en cuanto alguien
+// real escriba algo, su mensaje (con timestamp más nuevo) los reemplaza.
+const STALE_TEST_MESSAGES = ['Probando el mostrador desde el sandbox', '¿Quién viene hoy al club?'];
+// limpiar cualquier rastro ya cacheado en ESTE navegador de antes de este fix
+Object.keys(bubbles).forEach(function(n){
+  if(bubbles[n] && STALE_TEST_MESSAGES.indexOf(bubbles[n].text)!==-1){ delete bubbles[n]; }
+});
+saveBubbles();
 (async function backfillFromNostr(){
   try{
     const events = await withTimeout(pool.querySync(RELAYS, { kinds:[1], '#t':['olimpo-club-v1'], limit:100 }), 8000);
@@ -880,6 +902,7 @@ msgInput.addEventListener('keydown', function(e){ if(e.key==='Enter') send(); })
       const nameTag = ev.tags.find(function(t){ return t[0]==='olimpo_name'; });
       const name = nameTag && nameTag[1];
       if(!name || typeof ev.content!=='string') return;
+      if(STALE_TEST_MESSAGES.indexOf(ev.content)!==-1) return;
       const ts = ev.created_at*1000;
       if(!bubbles[name] || ts > (bubbles[name].ts||0)){
         bubbles[name] = { text: ev.content.slice(0,80), ts: ts };
@@ -901,7 +924,8 @@ async function openHistory(){
   list.innerHTML = '<div class="msg-empty">Cargando…</div>';
   overlay.classList.add('show');
   try{
-    const events = await withTimeout(pool.querySync(RELAYS, { kinds:[1], '#t':['olimpo-club-v1'], limit:40 }), 8000);
+    const events = (await withTimeout(pool.querySync(RELAYS, { kinds:[1], '#t':['olimpo-club-v1'], limit:40 }), 8000))
+      .filter(function(ev){ return STALE_TEST_MESSAGES.indexOf(ev.content)===-1; });
     events.sort(function(a,b){ return a.created_at-b.created_at; });
     if(!events.length){ list.innerHTML = '<div class="msg-empty">Aún nadie ha dejado mensaje.</div>'; return; }
     list.innerHTML = events.map(function(ev){
