@@ -89,8 +89,8 @@ header{
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
 /* ---- boot / intro ---- */
-.boot{padding:28px 18px 10px;max-width:720px;margin:0 auto;text-align:center}
-.boot p{font-size:.95rem;color:var(--text2) !important;-webkit-text-fill-color:var(--text2) !important;line-height:1.6}
+.boot{padding:12px 18px 6px;max-width:720px;margin:0 auto;text-align:center}
+.boot p{font-size:.8rem;color:var(--text2) !important;-webkit-text-fill-color:var(--text2) !important;line-height:1.4}
 .cursor{display:inline-block;width:9px;height:1.1em;background:var(--jade);vertical-align:text-bottom;animation:blink 1s steps(1) infinite}
 @keyframes blink{50%{opacity:0}}
 
@@ -189,7 +189,7 @@ main.console{max-width:1280px;margin:0 auto;padding:14px;display:flex;flex-direc
 
 /* ---- radio ---- */
 .radio-bar{
-  position:fixed;bottom:0;left:0;right:0;z-index:60;
+  position:fixed;bottom:0;left:0;right:0;z-index:95;
   background:var(--bg2);border-top:2px solid var(--jade);
   padding:6px 10px;display:flex;align-items:center;gap:8px;
   flex-wrap:nowrap;overflow-x:auto;white-space:nowrap;
@@ -257,7 +257,7 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
 </header>
 
 <div class="boot">
-  <p>Esto no es una página. Es la consola del club.<br>A donde vienes cuando extrañas a tu gente del Olimpo<span class="cursor"></span></p>
+  <p>La consola del club. A donde vienes cuando extrañas a tu gente del Olimpo<span class="cursor"></span></p>
 </div>
 
 <main class="console">
@@ -319,7 +319,7 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
 
 <div class="radio-bar">
   <div class="radio-label">RADIO</div>
-  <div class="radio-track" id="radioTrack">Elige una emisora</div>
+  <div class="radio-track" id="radioTrack">emisora</div>
   <div class="radio-genres">
     <button class="radio-genre" data-genre="progressive_house">House</button>
     <button class="radio-genre" data-genre="electronica_70s">70s</button>
@@ -1120,7 +1120,7 @@ fetch('ofertas.json').then(function(r){return r.json()}).then(function(d){
     var player=document.getElementById('radioAudio');
     player.onerror=null; player.pause(); player.removeAttribute('src'); player.load();
     document.querySelectorAll('.radio-genre').forEach(function(b){ b.classList.remove('active'); });
-    document.getElementById('radioTrack').textContent='Elige una emisora';
+    document.getElementById('radioTrack').textContent='emisora';
   };
 })();
 </script>
