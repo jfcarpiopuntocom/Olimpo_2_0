@@ -402,11 +402,34 @@ async function deriveSecretKey(name, digits){
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('olimpo-v1|'+name+'|'+digits.join('-')));
   return new Uint8Array(buf);
 }
+// Rotación de PIN: el dueño actual puede firmar, con su llave VIEJA, un
+// evento que diga "ahora soy esta llave NUEVA" (content.supersededBy). Solo
+// quien tiene la llave vieja puede producir esa firma — nadie más puede
+// secuestrar el personaje publicando una rotación falsa. getCanonicalClaim
+// sigue la cadena: primer claim manda, y desde ahí sigue cada sucesión
+// firmada por la pubkey vigente hasta la más reciente.
 async function getCanonicalClaim(name){
-  const events = await withTimeout(pool.querySync(RELAYS, { kinds:[30078], '#d':['olimpo-claim-'+name], limit:20 }), 9000);
+  const events = await withTimeout(pool.querySync(RELAYS, { kinds:[30078], '#d':['olimpo-claim-'+name], limit:50 }), 9000);
   if(!events.length) return null;
   events.sort(function(a,b){ return a.created_at-b.created_at; }); // el más antiguo manda — primer claim, gana
-  return events[0];
+  let pubkey = events[0].pubkey;
+  let watermark = events[0].created_at;
+  let moved = true;
+  while(moved){
+    moved = false;
+    const candidates = events.filter(function(ev){ return ev.pubkey===pubkey && ev.created_at>watermark; });
+    candidates.sort(function(a,b){ return b.created_at-a.created_at; });
+    const rotation = candidates[0];
+    if(rotation){
+      let data; try{ data = JSON.parse(rotation.content); }catch(e){ data = null; }
+      if(data && data.supersededBy){
+        pubkey = data.supersededBy;
+        watermark = rotation.created_at;
+        moved = true;
+      }
+    }
+  }
+  return { pubkey: pubkey };
 }
 
 const app = initializeApp(firebaseConfig);
