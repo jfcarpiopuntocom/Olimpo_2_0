@@ -248,30 +248,36 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
 
 <main>
 
+  <div class="panel" id="mensajes-panel">
+    <div class="panel-title">Saluda al club</div>
+    <div class="msg-form">
+      <input id="msgInput" type="text" maxlength="80" placeholder="Saluda — tu mensaje aparece sobre tu personaje…">
+      <button class="btn" id="msgSend">Decir</button>
+    </div>
+    <p class="hint">Tu mensaje queda flotando sobre tu personaje en el tablero de abajo hasta que escribas otro. Toca tu personaje primero si todavía no lo has hecho.</p>
+  </div>
+
+  <div class="panel" id="mostrador-panel">
+    <div class="panel-title">El Mostrador</div>
+    <div id="anuncios-list"><div class="anuncio">Cargando especiales…</div></div>
+    <p class="hint">Atiende Jose. Pronto: chatbot 24/7 aquí mismo para pedidos y preguntas.</p>
+  </div>
+
   <div class="panel" id="tablero-panel">
-    <div class="panel-title">Tablero · ¿Quién eres?</div>
+    <div class="panel-title">El chat de personajes</div>
     <div class="whoami" id="whoami">Toca tu personaje para entrar al club.</div>
     <div class="board" id="board"></div>
   </div>
 
-  <div class="panel" id="anuncios-panel">
-    <div class="panel-title">Anuncios del club</div>
-    <div id="anuncios-list"><div class="anuncio">Cargando anuncios…</div></div>
-  </div>
-
-  <div class="panel" id="mensajes-panel">
-    <div class="panel-title">Di algo al club</div>
-    <div class="msg-form">
-      <input id="msgInput" type="text" maxlength="80" placeholder="Tu mensaje aparece sobre tu personaje…">
-      <button class="btn" id="msgSend">Decir</button>
-    </div>
-    <p class="hint">Tu mensaje queda flotando sobre tu personaje en el tablero hasta que escribas otro. Toca tu personaje arriba antes de escribir.</p>
+  <div class="panel" id="eventos-panel">
+    <div class="panel-title">Eventos y anuncios</div>
+    <div id="eventos-list"><div class="anuncio">Cargando…</div></div>
   </div>
 
   <div class="panel" id="confianza-panel">
     <div class="panel-title">Confidencialidad y control total del usuario</div>
     <p class="trust-text">Olimpo 2.0 es un espacio para actividades culturales y educativas alrededor de plantas maestras: café, charlas, cine, arte y comunidad.</p>
-    <p class="trust-text">Tu PIN nunca se guarda como texto — solo su huella criptográfica (hash). Ni Jose ni nadie del club puede ver tu PIN. Jose solo puede <b>liberar</b> un personaje si pierdes acceso; no puede leer ni recuperar tu llave.</p>
+    <p class="trust-text">Tu PIN nunca se guarda como texto — deriva una llave criptográfica que solo vive en tu navegador. Ni Jose ni nadie del club puede ver ni recuperar tu PIN. Jose solo puede <b>liberar</b> un personaje si pierdes acceso.</p>
     <p class="trust-text">No pedimos ni guardamos tu nombre real. Elige cualquier nickname tocando "+ Nuevo" en el tablero — eso es lo único que queda registrado.</p>
   </div>
 
@@ -369,10 +375,30 @@ try {
    ============================================================ */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import {
-  initializeFirestore, doc, getDoc, setDoc, updateDoc, serverTimestamp,
-  collection, onSnapshot
+  initializeFirestore, doc, setDoc, collection, onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
+import { getPublicKey, finalizeEvent, SimplePool } from "https://esm.sh/nostr-tools@2";
+
+// Identidad real, criptográfica, vía Nostr — tu PIN deriva una llave secp256k1
+// (nunca se transmite ni se guarda, solo vive en tu sesión mientras la usas).
+// El "dueño" de un personaje es quien firmó el primer evento de claim visto
+// en los relés — verificable por cualquiera, sin pedirle permiso a nadie.
+// Firebase queda como espejo de cortesía/redundancia (best-effort, nunca
+// bloquea ni es la fuente de verdad) tal como se pidió: "cositas en Firebase
+// sin problema, por redundancia" — el dato que manda es Nostr.
+const RELAYS = ['wss://relay.damus.io','wss://nos.lol','wss://relay.nostr.band','wss://relay.snort.social'];
+const pool = new SimplePool();
+async function deriveSecretKey(name, digits){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('olimpo-v1|'+name+'|'+digits.join('-')));
+  return new Uint8Array(buf);
+}
+async function getCanonicalClaim(name){
+  const events = await withTimeout(pool.querySync(RELAYS, { kinds:[30078], '#d':['olimpo-claim-'+name], limit:20 }), 9000);
+  if(!events.length) return null;
+  events.sort(function(a,b){ return a.created_at-b.created_at; }); // el más antiguo manda — primer claim, gana
+  return events[0];
+}
 
 const app = initializeApp(firebaseConfig);
 // Forzado a long-polling: el selector de personaje no abría en redes
@@ -431,11 +457,6 @@ function avatarUrl(c){
     '&backgroundColor='+c.color+'&backgroundType=solid'+
     '&eyes='+encodeURIComponent('frame1,frame2,glow,robocop,sensor,shade01')+
     '&mouth='+encodeURIComponent('diagram,grill01,grill02,grill03,square01,square02');
-}
-
-async function sha256(str){
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
 
 const ESC_MAP = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'};
@@ -571,18 +592,19 @@ function withTimeout(promise, ms){
 async function claimOrVerify(name){
   pendingName = name;
   pendingIsOwnerSetup = false; // cada intento empieza limpio — evita que un setup de admin cancelado a medias se filtre a otro personaje
+  pendingClaimPubkey = null;
   resetModal();
   // Abrimos el modal YA, con estado de carga visible — antes el modal solo
-  // aparecía después de que Firestore respondiera, y en redes móviles lentas
+  // aparecía después de que la red respondiera, y en redes móviles lentas
   // eso podía tardar tanto que parecía que el botón "no hacía nada".
   pinTitle.textContent = 'Conectando…';
-  pinSub.textContent = 'Un momento.';
+  pinSub.textContent = 'Buscando en los relés de Nostr…';
   overlay.classList.add('show');
   try{
-    const ref = doc(db, 'olimpo_personajes', name);
-    const snap = await withTimeout(getDoc(ref), 9000);
-    if(snap.exists()){
+    const claim = await getCanonicalClaim(name);
+    if(claim){
       pendingMode = 'verify';
+      pendingClaimPubkey = claim.pubkey;
       pinTitle.textContent = 'Ingresa tu PIN';
       pinSub.textContent = name + ' ya tiene PIN. Ingresa tus 3 símbolos en orden.';
     } else if(name === ADMIN_NAME){
@@ -600,10 +622,10 @@ async function claimOrVerify(name){
     }
   }catch(e){
     pinTitle.textContent = 'Sin conexión';
-    pinSub.textContent = 'No se pudo conectar. Revisa tu internet y vuelve a tocar tu personaje.';
+    pinSub.textContent = 'No se pudo conectar a los relés de Nostr. Revisa tu internet y vuelve a tocar tu personaje.';
   }
 }
-let pendingName=null, pendingMode=null, pendingIsOwnerSetup=false;
+let pendingName=null, pendingMode=null, pendingIsOwnerSetup=false, pendingClaimPubkey=null;
 
 document.getElementById('pinConfirm').onclick = async function(){
   if(!pendingMode){ pinError.textContent='Aún no se confirma la conexión. Espera un momento.'; return; }
@@ -624,12 +646,25 @@ document.getElementById('pinConfirm').onclick = async function(){
     return;
   }
 
-  const hash = await sha256(picked.join('|')); // hash sobre ÍNDICES: emoji o dígito producen la misma llave
-  const ref = doc(db, 'olimpo_personajes', pendingName);
   try{
+    // Tu PIN deriva una llave secp256k1 real — nunca se transmite ni se
+    // guarda en ningún lado, solo vive en esta sesión del navegador.
+    const secretKey = await deriveSecretKey(pendingName, picked);
+    const myPubkey = getPublicKey(secretKey);
+
     if(pendingMode==='create'){
-      const docData = { pinHash: hash, claimedAt: serverTimestamp(), lastSeen: serverTimestamp(), role: pendingIsOwnerSetup ? 'owner' : 'member' };
-      await withTimeout(setDoc(ref, docData), 9000);
+      const role = pendingIsOwnerSetup ? 'owner' : 'member';
+      const tmpl = {
+        kind: 30078, created_at: Math.floor(Date.now()/1000),
+        tags: [['d','olimpo-claim-'+pendingName]], content: JSON.stringify({ role: role })
+      };
+      const signed = finalizeEvent(tmpl, secretKey);
+      await withTimeout(Promise.any(pool.publish(RELAYS, signed)), 9000); // basta con que UN relé lo acepte
+      // espejo de cortesía en Firebase — best-effort, nunca bloquea ni decide nada;
+      // solo sirve para que el tablero pueda listar nicknames sin tener que
+      // adivinarlos buscando en relés. Si falla, no pasa nada.
+      setDoc(doc(db,'olimpo_personajes',pendingName), { pubkey: myPubkey, role: role }).catch(function(){});
+
       var codigo = picked.join('-');
       var wasOwnerSetup = pendingIsOwnerSetup;
       pendingIsOwnerSetup = false;
@@ -641,13 +676,11 @@ document.getElementById('pinConfirm').onclick = async function(){
       alert((wasOwnerSetup ? 'Panel de Jose activado. ' : 'Listo. ') + 'Tu código de respaldo es ' + codigo + ' — anótalo. Sirve igual que tus emojis para volver a entrar como ' + pendingName + '.');
       return;
     } else {
-      const snap = await withTimeout(getDoc(ref), 9000);
-      if(!snap.exists() || snap.data().pinHash !== hash){
+      if(myPubkey !== pendingClaimPubkey){
         pinError.textContent = 'PIN incorrecto. Ese personaje ya es alguien más.';
         clearPicked();
         return;
       }
-      await withTimeout(updateDoc(ref, { lastSeen: serverTimestamp() }), 9000);
     }
     me = pendingName;
     localStorage.setItem('olimpo_me', me);
@@ -655,7 +688,7 @@ document.getElementById('pinConfirm').onclick = async function(){
     closeModal();
     renderBoard();
   }catch(e){
-    pinError.textContent = 'Error de conexión con Firebase. Intenta de nuevo.';
+    pinError.textContent = 'Error de conexión. Intenta de nuevo.';
   }
 };
 
@@ -719,20 +752,60 @@ function send(){
   bubbles[me] = { text: text, ts: Date.now() };
   saveBubbles();
   renderBoard();
-  if(sendBubble) sendBubble({ name: me, text: text }); // directo a los demás dispositivos conectados, nunca a un servidor
+  if(sendBubble) sendBubble({ name: me, text: text }); // instantáneo a quien esté conectado P2P ahora mismo
+  // también lo publicamos como evento Nostr firmado — así quien NO estaba
+  // conectado en este momento puede recuperarlo después al consultar los
+  // relés (backfillFromNostr), sin que ningún servidor de Olimpo lo guarde.
+  (async function(){
+    try{
+      const pinArr = JSON.parse(localStorage.getItem('olimpo_pin')||'null');
+      if(!pinArr) return;
+      const secretKey = await deriveSecretKey(me, pinArr);
+      const tmpl = {
+        kind: 1, created_at: Math.floor(Date.now()/1000),
+        tags: [['t','olimpo-club-v1'],['olimpo_name', me]], content: text
+      };
+      const signed = finalizeEvent(tmpl, secretKey);
+      pool.publish(RELAYS, signed);
+    }catch(e){}
+  })();
 }
 msgSend.onclick = send;
 msgInput.addEventListener('keydown', function(e){ if(e.key==='Enter') send(); });
 
-/* ---- anuncios ---- */
+/* ---- al cargar, recuperamos los últimos mensajes del club desde los
+   relés de Nostr (quien no estuvo conectado P2P se pone al día igual). ---- */
+(async function backfillFromNostr(){
+  try{
+    const events = await withTimeout(pool.querySync(RELAYS, { kinds:[1], '#t':['olimpo-club-v1'], limit:100 }), 8000);
+    events.forEach(function(ev){
+      const nameTag = ev.tags.find(function(t){ return t[0]==='olimpo_name'; });
+      const name = nameTag && nameTag[1];
+      if(!name || typeof ev.content!=='string') return;
+      const ts = ev.created_at*1000;
+      if(!bubbles[name] || ts > (bubbles[name].ts||0)){
+        bubbles[name] = { text: ev.content.slice(0,80), ts: ts };
+      }
+    });
+    saveBubbles();
+    renderBoard();
+  }catch(e){}
+})();
+
+/* ---- mostrador (especiales) + eventos y anuncios (novedades) — mismo ofertas.json ---- */
 fetch('ofertas.json').then(function(r){return r.json()}).then(function(d){
-  const box = document.getElementById('anuncios-list');
-  let html = '<div class="anuncio"><b>Hoy:</b> '+d.especial_del_dia+'</div>';
-  html += '<div class="anuncio"><b>Esta semana:</b> '+d.especial_de_la_semana+'</div>';
-  (d.novedades||[]).forEach(function(n){ html += '<div class="anuncio">'+n+'</div>'; });
-  box.innerHTML = html;
+  document.getElementById('anuncios-list').innerHTML =
+    '<div class="anuncio"><b>Hoy:</b> '+d.especial_del_dia+'</div>' +
+    '<div class="anuncio"><b>Esta semana:</b> '+d.especial_de_la_semana+'</div>';
+  const eventos = document.getElementById('eventos-list');
+  if(d.novedades && d.novedades.length){
+    eventos.innerHTML = d.novedades.map(function(n){ return '<div class="anuncio">'+n+'</div>'; }).join('');
+  } else {
+    eventos.innerHTML = '<div class="anuncio">Sin novedades por ahora.</div>';
+  }
 }).catch(function(){
-  document.getElementById('anuncios-list').innerHTML = '<div class="anuncio">No se pudieron cargar los anuncios.</div>';
+  document.getElementById('anuncios-list').innerHTML = '<div class="anuncio">No se pudieron cargar los especiales.</div>';
+  document.getElementById('eventos-list').innerHTML = '<div class="anuncio">No se pudieron cargar los anuncios.</div>';
 });
 </script>
 

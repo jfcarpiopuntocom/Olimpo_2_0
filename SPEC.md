@@ -1,63 +1,76 @@
-# Olimpo 2.0 — Spec v1.0
+# Olimpo 2.0 — Spec v1.2
 
-**No es un sitio web brochure. Es una consola interactiva** — a donde vas cuando extrañas a tu gente del Olimpo y no puedes ir. Tablero de personajes, anuncios y radio en vivo, estética de consola/game (scanlines, monospace, sprites).
+**No es un sitio web brochure. Es una consola interactiva** — a donde vas cuando extrañas a tu gente del Olimpo y no puedes ir.
 
 Centro cultural y asociación civil. Local esquinero, 3 niveles, semiescalera conecta todo (sótano: barra/café/cine/conferencias · calle: arte y camisetas · arriba: oficina de Jose) — contexto del lugar físico, no estructura de la consola.
 
 Look: 1/3 ancestral · 1/3 grecorromano · 1/3 futurista · 1% sensual/sexy, siempre trascendente.
 
-## Microsistemas v1.0 (este repo)
+## Orden de la página (de arriba a abajo)
+1. **Saluda al club** — input de mensaje, lo primero que ve quien llega. Saludas, tu mensaje aparece como burbuja sobre tu personaje.
+2. **El Mostrador** — especiales del día/semana. Por ahora "atiende Jose"; pronto un chatbot 24/7 aquí mismo (ver sección 2).
+3. **El chat de personajes** — el tablero: eliges/creas tu personaje, ves a todo el club con sus burbujas de diálogo.
+4. **Eventos y anuncios** — novedades generales del club.
+5. **Confidencialidad y control total del usuario** — qué se guarda, qué no, quién puede ver qué.
 
-### 1. Tablero de personajes + PIN de 3 símbolos — IMPLEMENTADO (Firestore, en vivo)
-- 11 personajes fundadores: Jose, David, Fer, Mateo, Kevin, Matto, Mateo Tusisabes, Juan, Anahi, Laura, Maria. Cualquiera puede sumar uno propio tocando "+ Nuevo" en el tablero (ver nicknames abajo).
-- Avatares vía **DiceBear** estilo **"bottts-neutral"** (robots), open source, licencia MIT, uso comercial libre sin attribution requerida (https://www.dicebear.com/licenses/). Seed = nombre del personaje, así el avatar es siempre el mismo para cada quien. Gafas/visores fijados a variantes serias estilo "rave anónimo" (`eyes=frame1,frame2,glow,robocop,sensor,shade01`) — nada de ojos redondos/corazones/tiernos, que se veían infantiles para un club de 28-52 años.
-- **Nicknames, sin nombre real.** El tablero ya no se limita a los 11 fundadores: cualquiera toca "+ Nuevo personaje", elige cualquier nickname (2-20 caracteres) y queda registrado igual que los fundadores — mismo flujo de PIN, mismo doc en `olimpo_personajes/{nickname}`. La app nunca pide ni guarda nombre real, email, ni ningún otro dato — el nickname es la única identidad. Color de avatar generado determinísticamente del nickname (hash simple → paleta de 14 colores).
-- **Jose es el admin del tablero, con activación especial.** Al tocar "Jose" por primera vez (mientras nadie lo haya activado), el flujo NO deja crear cualquier PIN libre como los demás — pide un código de activación inicial (⚡⚡⚡, los tres primeros símbolos del set). Solo quien conoce ese código (dado por el equipo, fuera de la app) puede activarlo. Al acertarlo, de inmediato se le pide elegir su PIN definitivo — el código de activación deja de servir en cuanto lo hace (nunca se guarda en Firestore, solo se valida client-side antes de dejar pasar a la creación del PIN real). El doc de Jose queda con `role:'owner'`; el resto de personajes con `role:'member'` — sienta la base para moderación futura (ver sección 4).
-- **Primer club con contraseña de 3 símbolos — emoji y dígito son la MISMA llave, con salvaguarda anti-espionaje de hombro.** Set de 30 símbolos serios/synthwave (⚡🌙🔥💀☄️🩸🖤🔱🌌🔺🗲🌘🔆☠️🌠🔻🕶️⚜️🌀🔶✴️🌑💥🦴✨⛓️🎭♾️🛸⬟), **3 emoji distintos por cada dígito (0-9)** — quien te ve tocar un emoji no puede deducir tu dígito real sin conocer el mapeo, que solo vive en el código (`PIN_DIGIT_OF` en `index.html`). El hash se calcula sobre el DÍGITO real, no sobre el emoji ni su posición visual — así "3 emojis" y "3 dígitos" son interfaces distintas para la misma credencial, no dos PINs separados. Al confirmar la creación se muestra el código numérico equivalente ("tu código de respaldo es 3-7-1") para anotar, por si después prefieres entrar tecleando números en vez de buscar el emoji.
-- Flujo: tocas tu personaje → si nadie lo ha tomado, eliges 3 símbolos en orden (emoji o dígito, da igual), quedas registrado (`olimpo_personajes/{nombre}` en Firestore, guardando el hash SHA-256 del PIN, nunca el PIN en claro); si ya está tomado, debes ingresar el mismo PIN para "ser" ese personaje — así nadie suplanta a nadie.
-- Identidad cacheada en `localStorage` de tu navegador (no te vuelve a preguntar cada visita) + sincronizada a la nube (Firestore es la fuente de verdad, localStorage es solo caché local).
-- **Stack:** Firebase Firestore — proyecto compartido temporalmente con `ajedrez-16bit` (`elmultiversodelajedrez`), todo en colecciones con prefijo `olimpo_` para no chocar con nada del ajedrez. Mover a un Firebase propio de Jose es solo cambiar `firebase-config.js`.
-- Archivos: `firebase-config.js` (config web pública, no es secreta — la protección real son las Firestore Rules), `firestore.rules` (solo los dos bloques `match /olimpo_...` — van **adentro** del `service cloud.firestore { match /databases/{database}/documents { ... } }` que ya existe para el ajedrez. NO pegar el archivo completo encima del tuyo: duplicarías `rules_version`/`service` y Firebase tira "Parse error". Instrucciones paso a paso dentro del archivo).
-- **Recuperación de acceso:** si alguien olvida su PIN, no hay self-service — debe pedirle a Jose que libere su nombre borrando el documento `olimpo_personajes/{nombre}` manualmente desde la consola de Firebase, y vuelve a registrarse desde cero. **Jose nunca ve el PIN de nadie** — solo se guarda el hash, irreversible; liberar el nombre es lo único que puede hacer. Reset self-service vía email (Cloud Functions) queda para v1.2.
-- **Chat = burbujas de diálogo sobre cada personaje, 100% P2P, cero servidor.** El chat YA NO toca Firestore para nada. Usa **Trystero** (la misma librería de `ajedrez-16bit`) sobre **Nostr** como red de señalización pública (relés gratis, descentralizados, fallback automático a BitTorrent trackers si Nostr no conecta) para formar conexiones **WebRTC directas entre los navegadores conectados ahora mismo**. Tu mensaje:
-  1. Se guarda al instante en TU `localStorage` (`olimpo_bubbles`) — funciona aunque no haya nadie más conectado, "queda avanzado" en tu dispositivo.
-  2. Se transmite directo (P2P) a quien esté conectado en ese momento — nunca pasa ni se almacena en ningún servidor de Olimpo, Firebase, ni de nadie.
-  3. Cada dispositivo solo cachea lo que vio pasar por su propia conexión — fragmentado, parcial, nadie (ni Jose, ni el equipo, ni un tercero con una orden judicial a Firebase) tiene jamás el historial completo. Cuando alguien nuevo se conecta, los que ya están le pasan lo que ellos saben (`sync` action) — así el conocimiento se reconstruye entre pares, no desde un archivo central.
-  - Las burbujas **persisten hasta que esa persona escriba otra** (no hay timeout ni se borran solas).
-  - Firestore queda reservado SOLO para identidad (existencia del nombre + hash del PIN) — tráfico mínimo, una escritura por persona por sesión, tal como se pidió ("low traffic"). La colección `olimpo_mensajes` y los campos `lastMsg`/`lastMsgAt` del v1.0 anterior ya no se usan (las reglas que los permitían no estorban, pueden quedarse o limpiarse sin prisa).
-- **Seguridad:** nickname y texto del mensaje se escapan (`escapeHtml`) antes de insertarse en el DOM — sin este escape, cualquiera podía meter HTML/script en su nickname o mensaje y ejecutarlo en pantalla de todo el club (XSS). Nicknames con "/" se rechazan (rompían la referencia de Firestore). Si fallas el PIN o el código de activación de Jose, los símbolos elegidos se limpian automáticamente para poder reintentar sin cerrar el modal (antes quedaba "trabado").
-- **Fix mobile (el selector no abría en celular):** Firestore usa por defecto streaming WebChannel, que se cuelga en bastantes redes móviles/proxies. Se forzó `experimentalForceLongPolling: true` (más confiable que el auto-detect anterior). Además, el modal ahora abre instantáneamente al tocar (estado "Conectando…") en vez de esperar a que resuelva Firestore, y hay timeout de 9s con mensaje claro ("Sin conexión") si la red falla — antes se quedaba colgado en silencio, pareciendo roto. Esto sigue aplicando solo a identidad (PIN); el chat ya no depende de Firestore en absoluto.
-- Panel "Confidencialidad y control total del usuario" en la página: aclara que el club es de actividades culturales/educativas, que ningún PIN se guarda en texto plano, y que Jose solo puede liberar accesos, no leerlos.
+## Microsistemas
 
-### 2. Novedades/ofertas + chatbot
-- Chatbot recomendado: **Tawk.to** (gratis, sin límite de mensajes, widget JS de una línea, permite respuestas predefinidas/quick replies — ideal para upselling y "especial del día"). Alternativa: Crisp (free tier más limitado).
-- Placeholder de instalación dejado en `index.html` (comentario `<!-- TAWK.TO WIDGET -->`) — Jose pega su Property ID cuando cree su cuenta tawk.to (gratis, 2 min).
-- Sección "Especial del día/semana" ya maquetada, editable a mano por ahora (JSON simple `ofertas.json` para que Jose la actualice sin tocar código).
+### 1. Identidad: PIN de 3 símbolos → llave criptográfica real en Nostr — IMPLEMENTADO
+**La identidad ya NO depende de una base de datos central.** Tu PIN deriva una llave secp256k1 real (la misma criptografía de Bitcoin/Nostr), y "ser dueño" de un nombre se demuestra firmando un evento — publicado en relés públicos de Nostr, verificable por cualquiera, sin pedirle permiso a nadie ni confiar en un servidor.
 
-### 3. Radio — IMPLEMENTADO (live, sin mp3)
-- Mismo motor que `ajedrez-16bit`: 4 emisoras online en vivo vía **radio-browser.info** (directorio gratis, sin auth) + streams pinned como respaldo.
-- Sin archivos que subir ni mantener — siempre suena, no depende de Jose subiendo audio.
-- 4 botones de género en la barra inferior:
-  1. **Progressive House** — pinned: SomaFM Beat Blender
-  2. **Electrónica 70s** — pinned: SomaFM Drone Zone (kosmische/synth, vibra Tangerine Dream)
-  3. **Progressive Lounge** — pinned: SomaFM Groove Salad
-  4. **Burning Man / Playa** — pinned: SomaFM Deep Space One (psybient/desert)
-- Si el stream pinned cae, fallback automático a búsqueda por tag/nombre en radio-browser.info.
+- 11 personajes fundadores: Jose, David, Fer, Mateo, Kevin, Matto, Mateo Tusisabes, Juan, Anahi, Laura, Maria. Cualquiera suma uno propio tocando "+ Nuevo" — nickname libre (2-20 caracteres), **nunca se pide ni se guarda nombre real**.
+- Avatares vía **DiceBear "bottts-neutral"** (robots, MIT, uso comercial libre, sin attribution: https://www.dicebear.com/licenses/). Gafas/visores fijados a variantes serias estilo "rave anónimo" (`eyes=frame1,frame2,glow,robocop,sensor,shade01`) — nada tierno/infantil.
+- **PIN de 3 símbolos, 30 emojis (3 por dígito 0-9) — salvaguarda anti-espionaje de hombro.** Quien te ve tocar un emoji no puede deducir tu dígito real sin el mapeo (`PIN_DIGIT_OF` en el código). Emoji y dígito son la MISMA llave — el hash/derivación se calcula sobre el dígito real, no sobre el emoji.
+- **Cómo funciona la identidad (NIP-33, eventos direccionables):**
+  1. Tu PIN (3 dígitos, venga de emoji o teclado numérico) + tu nombre/nickname → `sha256('olimpo-v1|'+nombre+'|'+digitos)` → llave secreta secp256k1. Esta llave **nunca se transmite ni se guarda en ningún lado** — se deriva de nuevo cada vez que la necesitas, vive solo en la memoria de tu sesión.
+  2. Para reclamar un nombre por primera vez: firmas un evento `kind 30078` con tag `['d','olimpo-claim-{nombre}']` y lo publicas en 4 relés públicos (`relay.damus.io`, `nos.lol`, `relay.nostr.band`, `relay.snort.social`). Basta con que UNO lo acepte.
+  3. Para verificar quién es el dueño real: se consultan los 4 relés por todos los eventos con ese `d`-tag; el de **`created_at` más antiguo** es el canónico — "primer claim, gana". Si tu llave deriva el mismo `pubkey` que ese evento, eres tú; si no, el PIN es incorrecto.
+  4. **Jose, admin del tablero:** activación especial. Tocar "Jose" sin que nadie lo haya reclamado pide un código de activación (⚡⚡⚡ = dígitos `0,0,0`, dado por el equipo fuera de la app) antes de dejar elegir el PIN definitivo — así nadie puede reclamar "Jose" por accidente o malicia con un PIN cualquiera. Su evento de claim queda con `role:'owner'` en el contenido.
+- **Verificado funcionando en vivo** (no solo en teoría): se probó el flujo completo en este repo — activación de Jose, publicación del evento en relés reales, y consulta independiente confirmando el claim visible en `relay.damus.io`/`nos.lol`.
+- **Firebase = espejo de cortesía, no fuente de verdad.** Tal como se pidió ("cositas en Firebase por redundancia, sin problema"): cada claim también se escribe best-effort (nunca bloquea, si falla no pasa nada) a Firestore (`olimpo_personajes/{nombre}` con `pubkey` + `role`) — sirve solo para que la app pueda listar nicknames existentes sin tener que adivinarlos en los relés. Si Firebase desapareciera mañana, la identidad real sigue intacta en Nostr.
+- **Recuperación de acceso:** si pierdes tu PIN, no hay self-service — nadie puede "resetear" una llave criptográfica derivada (esa es la idea: ni Jose, ni nosotros, ni nadie tiene una puerta trasera). La única opción es elegir un nuevo nickname y empezar de cero. Esto es una propiedad de seguridad, no una limitación a arreglar.
 
-### 4. Admin / moderación
-- Jose = super-admin (controla mute/ban, otorga admins limitados).
-- Base ya sentada: cada doc en `olimpo_personajes` tiene `role:'owner'` (solo Jose, vía el flujo de activación) o `role:'member'` (todos los demás). Falta construir las acciones de moderación en sí (mute/ban) y las reglas Firestore que las restrinjan a `role in ['owner','admin']` — eso es v1.2.
-- **Validación más fuerte para Jose (pedida, no implementada aún):** la idea es añadir Firebase Authentication con Google Sign-In como segunda capa SOLO para el panel de Jose (el resto del club sigue con el PIN de 3 símbolos, mucho más liviano). Es poco código (`signInWithPopup` + `GoogleAuthProvider`, ~10 líneas), pero requiere: (1) habilitar el proveedor Google en Firebase Console → Authentication → Sign-in method (2 clics), (2) agregar el dominio de GitHub Pages a "Authorized domains", y (3) el Gmail real de Jose para restringir el acceso a esa cuenta específica. No lo implementamos hasta tener esos 3 datos/decisiones de Jose — lo dejamos documentado para no construir algo a medias con un correo inventado.
+### 2. Chat = burbujas P2P + Nostr, cero servidor central — IMPLEMENTADO
+**Reemplaza por completo el chat tipo lista.** Tu mensaje aparece como burbuja flotante sobre tu avatar y **persiste hasta que escribas otro** (sin timeout, sin borrado automático).
 
-## Pendiente para v1.1 (requiere decisiones/cuentas de Jose)
-- Pegar los bloques de `firestore.rules` **dentro** de las reglas existentes del ajedrez en la consola de Firebase (sin esto, la identidad/PIN no va a poder leer/escribir — el chat funciona aparte, vía P2P, no depende de esto)
-- Cuenta tawk.to
-- Verificar el flujo de PIN e identidad en navegador real (no en sandbox de preview) — el chat P2P (Trystero/Nostr) ya se verificó funcionando en el sandbox
+- **Transporte:** [Trystero](https://github.com/dmotz/trystero) (la misma librería que `ajedrez-16bit`) sobre **Nostr** como red de señalización para WebRTC — fallback automático a BitTorrent trackers si Nostr no conecta. Las conexiones son **P2P directas entre navegadores**, sin servidor de Olimpo en el medio.
+- **Triple capa, "fractal y fragmentaria" a propósito:**
+  1. Tu mensaje se guarda al instante en TU `localStorage` — funciona aunque nadie más esté conectado.
+  2. Se transmite directo (WebRTC) a quien esté conectado contigo ahora mismo.
+  3. Se publica como evento Nostr firmado (`kind 1`, tag `['t','olimpo-club-v1']`) en los mismos 4 relés — así quien NO estaba conectado en ese momento lo recupera después (`backfillFromNostr`, al cargar la página).
+  - Nadie — ni Jose, ni el equipo, ni un tercero con una orden judicial a un servidor — tiene jamás el historial completo. Cada relé y cada dispositivo solo tiene fragmentos.
+- **Verificado funcionando en vivo:** mensaje de prueba publicado y recuperado independientemente desde `relay.damus.io` y `nos.lol` en este repo.
+- **Seguridad:** nickname y texto se escapan (`escapeHtml`) antes de insertarse en el DOM (previene XSS). Nicknames con "/" se rechazan.
 
-## Roadmap v1.2 (pedido por Jose, aún sin construir — documentado para no prometer de más)
-- **Lounge virtual con streams/DJs**, livestream en vivo en la página
-- **Mensajes privados** entre personajes (hoy el tablero es público, todos ven todo)
+### 3. El Mostrador: especiales + chatbot — PARCIAL
+- Especiales del día/semana ya maquetados, editables a mano vía `ofertas.json` (sin tocar código).
+- **"Atiende Jose" por ahora** — su personaje en el tablero es, de hecho, el primer "chatbot": cualquiera puede dejarle un mensaje y él responde como cualquier otro miembro, vía las burbujas P2P. Cuando se conecte un chatbot automatizado, hereda exactamente ese mismo canal (mismo tablero, misma identidad de personaje) — no hace falta UI nueva.
+- **Chatbot automatizado (roadmap, no implementado):** recomendado **Tawk.to** (gratis, sin límite, widget de una línea, respuestas predefinidas — bueno para upselling/especial del día) como primera capa simple. Para algo más "ente vivo" — que conteste como si fuera Jose o la barra, con personalidad, en DMs o en el mostrador — la vía natural una vez exista mensajería privada (ver Roadmap) es un bot que escucha el mismo canal Nostr/P2P y responde firmando como su propio personaje. Documentado, no construido — falta decidir el motor (Tawk.to vs bot propio) antes de built.
+
+### 4. Radio — IMPLEMENTADO (live, sin mp3)
+- Mismo motor que `ajedrez-16bit`: 4 emisoras online en vivo vía **radio-browser.info** (gratis, sin auth) + streams pinned como respaldo, fallback automático si caen.
+- Progressive House (SomaFM Beat Blender) · Electrónica 70s (SomaFM Drone Zone) · Progressive Lounge (SomaFM Groove Salad) · Burning Man/Playa (SomaFM Deep Space One). Botón Stop.
+
+### 5. Admin / moderación
+- Jose = owner (`role:'owner'` en su claim de Nostr, ver sección 1).
+- Falta construir las acciones de moderación en sí (mute/ban) — v1.2. Sin un servidor central, mute/ban probablemente se implementa como "lista de pubkeys bloqueados" que cada cliente respeta localmente (firmada/publicada por Jose), no como un borrado real — coherente con la filosofía P2P de esta app.
+- **Google Sign-In para Jose (pedido, no implementado):** capa extra opcional sobre la activación por código — requiere su Gmail real y habilitar el proveedor en Firebase Console. No se construye hasta tener esos datos.
+
+## Archivos del repo
+- `index.html` — toda la app (HTML+CSS+JS, sin build step)
+- `firebase-config.js` — config web pública de Firebase (no es secreta), espejo de cortesía
+- `firestore.rules` — reglas para pegar **dentro** de las reglas existentes del ajedrez (instrucciones paso a paso en el archivo)
+- `ofertas.json` — especiales/novedades, editable a mano
+
+## Pendiente para v1.1 (requiere a Jose)
+- Pegar el bloque actualizado de `firestore.rules` en la consola de Firebase (el espejo de cortesía no escribirá hasta entonces — el chat y la identidad real en Nostr funcionan igual sin esto)
+- Cuenta tawk.to si se decide ir por esa vía para el chatbot del Mostrador
+- Probar el flujo completo en un navegador real, no solo en el sandbox de desarrollo
+
+## Roadmap (pedido, aún sin construir — documentado para no prometer de más)
+- **Lounge virtual con streams/DJs en vivo**
+- **Mensajes privados (DMs)** entre personajes — base natural para esto: NIP-04/NIP-44 de Nostr (mensajes cifrados extremo a extremo), ya tenemos las llaves derivadas del PIN listas para usarse
 - **Pre-pedidos y pedidos a la barra de Jose**
 - **Reservaciones de espacio** (medicina del futuro, DJs que quieren poner música)
-- Reset de PIN vía email (Cloud Functions)
-- Cada uno de estos es su propia colección Firestore + UI; se construyen uno a la vez para no romper lo que ya funciona.
+- **Chatbot/ente vivo** en el Mostrador y/o DMs (ver sección 3)
+- Mute/ban reales (ver sección 5)

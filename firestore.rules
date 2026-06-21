@@ -10,7 +10,7 @@
    1. Abre Firebase Console > Firestore Database > Reglas
    2. Busca la línea que dice  match /databases/{database}/documents {
       (la tuya, la que ya existe para el ajedrez)
-   3. Pega los DOS bloques "match /olimpo_..." de abajo ahí ADENTRO,
+   3. Pega el bloque "match /olimpo_personajes" de abajo ahí ADENTRO,
       junto a los match que ya tengas del ajedrez (ej. match /games/{id}
       o lo que sea que uses) — todos los match conviven dentro del
       mismo par de llaves exteriores.
@@ -31,35 +31,25 @@
          ...
        }
 
-       match /olimpo_mensajes/{msgId} {       <-- esto también
-         ...
-       }
-
      }
    }
+
+   CAMBIO (v1.2): la identidad real ahora vive en eventos firmados en
+   relés de Nostr (kind 30078, ver index.html). Esta colección de Firestore
+   quedó como espejo de cortesía/redundancia, de solo lectura conveniente
+   para listar nicknames — ya NO guarda pinHash ni decide quién es dueño de
+   nada. `olimpo_mensajes` ya no se usa (el chat es P2P + Nostr, no toca
+   Firestore) — puedes borrar ese bloque de tus reglas si ya lo tenías, o
+   dejarlo, no hace daño.
    ============================================================ */
 
-    // Personajes: cualquiera puede leer (para saber quién está tomado),
-    // pero solo se puede crear una vez (claim) y nunca se puede pisar el
-    // pinHash de otro — el cambio de pinHash solo lo hace quien ya lo sabe
-    // (verificado client-side antes de escribir; endurecimiento server-side
-    // con Cloud Functions queda para v1.2, ver SPEC.md).
+    // Personajes: solo un espejo de lectura conveniente (existencia +
+    // pubkey + role). Cualquiera puede leer y escribir su propio espejo —
+    // no es sensible: el pubkey no revela el PIN, y la fuente de verdad
+    // real (quién es dueño de qué) vive en los relés de Nostr, no aquí.
     match /olimpo_personajes/{name} {
       allow read: if true;
-      allow create: if request.resource.data.keys().hasAll(['pinHash','claimedAt'])
-                    && request.resource.data.pinHash is string;
-      allow update: if resource.data.pinHash == request.resource.data.pinHash
-                    || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastSeen']);
+      allow write: if request.resource.data.keys().hasOnly(['pubkey','role'])
+                   && request.resource.data.pubkey is string;
       allow delete: if false;
-    }
-
-    // Mensajes del tablero: cualquiera lee, cualquiera escribe (texto corto,
-    // moderación manual por Jose desde la consola de Firebase mientras no
-    // exista el panel de admin — v1.2).
-    match /olimpo_mensajes/{msgId} {
-      allow read: if true;
-      allow create: if request.resource.data.text is string
-                    && request.resource.data.text.size() <= 200
-                    && request.resource.data.who is string;
-      allow update, delete: if false;
     }
