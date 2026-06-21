@@ -318,8 +318,8 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
 </footer>
 
 <div class="radio-bar">
-  <div class="radio-label">RADIO</div>
-  <div class="radio-track" id="radioTrack">emisora</div>
+  <div class="radio-label">RADIO OLIMPO LIVE</div>
+  <div class="radio-track" id="radioTrack"></div>
   <div class="radio-genres">
     <button class="radio-genre" data-genre="progressive_house">House</button>
     <button class="radio-genre" data-genre="electronica_70s">70s</button>
@@ -1120,7 +1120,7 @@ fetch('ofertas.json').then(function(r){return r.json()}).then(function(d){
     var player=document.getElementById('radioAudio');
     player.onerror=null; player.pause(); player.removeAttribute('src'); player.load();
     document.querySelectorAll('.radio-genre').forEach(function(b){ b.classList.remove('active'); });
-    document.getElementById('radioTrack').textContent='emisora';
+    document.getElementById('radioTrack').textContent='';
   };
 })();
 </script>
