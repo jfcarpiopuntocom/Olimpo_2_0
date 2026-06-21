@@ -205,6 +205,7 @@ main{max-width:720px;margin:0 auto;padding:18px}
 .pin-box{
   background:var(--bg2);border:1px solid var(--gold);border-radius:12px;
   padding:22px;max-width:380px;width:100%;
+  max-height:90vh;overflow-y:auto;
 }
 .pin-box h3{font-size:1.05rem;margin-bottom:4px;color:var(--gold) !important;-webkit-text-fill-color:var(--gold) !important}
 .pin-box p{font-family:Arial,sans-serif;font-size:.85rem;color:var(--text2) !important;-webkit-text-fill-color:var(--text2) !important;margin-bottom:14px}
@@ -268,8 +269,8 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
   </div>
 
   <div class="panel" id="confianza-panel">
-    <div class="panel-title">Confianza y legalidad</div>
-    <p class="trust-text">Olimpo 2.0 es un espacio para actividades legales y educativas alrededor de plantas maestras: café, charlas, cine, arte y comunidad. Nada aquí es asesoría médica ni promueve actividad ilegal.</p>
+    <div class="panel-title">Confidencialidad y control total del usuario</div>
+    <p class="trust-text">Olimpo 2.0 es un espacio para actividades culturales y educativas alrededor de plantas maestras: café, charlas, cine, arte y comunidad.</p>
     <p class="trust-text">Tu PIN nunca se guarda como texto — solo su huella criptográfica (hash). Ni Jose ni nadie del club puede ver tu PIN. Jose solo puede <b>liberar</b> un personaje si pierdes acceso; no puede leer ni recuperar tu llave.</p>
     <p class="trust-text">No pedimos ni guardamos tu nombre real. Elige cualquier nickname tocando "+ Nuevo" en el tablero — eso es lo único que queda registrado.</p>
   </div>
@@ -382,11 +383,17 @@ function colorFromName(name){
   return PALETTE[h % PALETTE.length];
 }
 // Set de símbolos para el PIN — alquímico/synthwave, serio, sin emoji infantiles.
-// Exactamente 10 símbolos — cada uno corresponde 1:1 a un dígito (0-9) por su
-// posición, así "elige 3 emojis" y "elige 3 dígitos" son la MISMA llave, no
-// dos credenciales distintas. Al crear el PIN con emojis te mostramos el
-// código numérico equivalente como respaldo para anotar.
-const PIN_SYMBOLS = ['⚡','🌙','🔥','💀','☄️','🩸','🖤','🔱','🌌','🔺'];
+// 30 símbolos, 3 por dígito (0-9) — salvaguarda contra espionaje de hombro:
+// quien te ve tocar un emoji no puede saber qué dígito es sin conocer el
+// mapeo (solo lo sabe el código). PIN_SYMBOLS y PIN_DIGIT_OF van en paralelo:
+// PIN_SYMBOLS[i] es lo que se ve, PIN_DIGIT_OF[i] es el dígito real que
+// produce — así "3 emojis" y "3 dígitos" siguen siendo la MISMA llave.
+const PIN_SYMBOLS = [
+  '⚡','🌙','🔥','💀','☄️','🩸','🖤','🔱','🌌','🔺',
+  '🗲','🌘','🔆','☠️','🌠','🔻','🕶️','⚜️','🌀','🔶',
+  '✴️','🌑','💥','🦴','✨','⛓️','🎭','♾️','🛸','⬟'
+];
+const PIN_DIGIT_OF = [0,1,2,3,4,5,6,7,8,9, 0,1,2,3,4,5,6,7,8,9, 0,1,2,3,4,5,6,7,8,9];
 
 const board = document.getElementById('board');
 const whoami = document.getElementById('whoami');
@@ -489,11 +496,12 @@ function buildGrid(mode){
   pinGrid.innerHTML='';
   const labels = mode==='emoji' ? PIN_SYMBOLS : DIGITS;
   labels.forEach(function(label, idx){
+    const digit = mode==='emoji' ? PIN_DIGIT_OF[idx] : idx; // 3 emoji distintos comparten el mismo dígito real
     const b = document.createElement('button');
     b.className = 'pin-emoji'; b.type='button'; b.textContent = label;
     b.onclick = function(){
       if(picked.length>=3) return;
-      picked.push(idx); // guardamos el ÍNDICE, no el símbolo — así emoji y dígito son la misma llave
+      picked.push(digit); // guardamos el DÍGITO real, no el índice visual — así emoji y dígito son la misma llave
       pinSlots[picked.length-1].textContent = label;
     };
     pinGrid.appendChild(b);
