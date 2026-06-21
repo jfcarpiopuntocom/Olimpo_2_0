@@ -335,13 +335,34 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
 </div>
 
 <script type="module">
+// Trystero — P2P real (WebRTC) usando relés públicos de Nostr solo para el
+// "apretón de manos" inicial entre dispositivos, igual que en ajedrez-16bit.
+// Ningún mensaje pasa ni se guarda en ningún servidor — viaja directo entre
+// los navegadores conectados. Si Nostr no conecta, cae a BitTorrent trackers
+// (mismo mecanismo, otra red de señalización pública).
+try {
+  const nostrMod = await import('https://esm.sh/trystero@0.20.0/nostr');
+  window.__trystero = { joinRoom: nostrMod.joinRoom, kind: 'nostr' };
+} catch(e) {
+  try {
+    const torrentMod = await import('https://esm.sh/trystero@0.20.0/torrent');
+    window.__trystero = { joinRoom: torrentMod.joinRoom, kind: 'torrent' };
+  } catch(e2) {
+    window.__trystero = null;
+  }
+}
+</script>
+
+<script type="module">
 /* ============================================================
-   Olimpo — tablero vivo + PIN de 3 símbolos + burbujas de
-   diálogo, vía Firebase Firestore (proyecto compartido,
-   colecciones con prefijo olimpo_, ver firebase-config.js y
-   firestore.rules). Avatares: DiceBear "bottts-neutral" (robots,
-   sin caras de muñeco), gafas/visores fijados a variantes serias
-   ("rave anonymous"). Símbolos del PIN: set serio/synthwave.
+   Olimpo — tablero vivo + PIN de 3 símbolos vía Firebase Firestore
+   (solo identidad: el hash del PIN, tráfico mínimo, colecciones con
+   prefijo olimpo_, ver firebase-config.js y firestore.rules) +
+   burbujas de diálogo vía Trystero/Nostr P2P (sin servidor — cada
+   mensaje viaja directo entre dispositivos conectados y se cachea
+   solo localmente, fragmentado, nadie tiene el historial completo).
+   Avatares: DiceBear "bottts-neutral" (robots, sin caras de muñeco),
+   gafas/visores fijados a variantes serias ("rave anonymous").
    Jose (admin del tablero) entra con un código de activación
    inicial y de inmediato elige su PIN definitivo — el código de
    activación deja de servir en cuanto lo hace.
@@ -349,7 +370,7 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import {
   initializeFirestore, doc, getDoc, setDoc, updateDoc, serverTimestamp,
-  collection, addDoc, onSnapshot
+  collection, onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
@@ -399,7 +420,9 @@ const board = document.getElementById('board');
 const whoami = document.getElementById('whoami');
 const onlineCountEl = document.getElementById('onlineCount');
 let me = localStorage.getItem('olimpo_me') || null;
-let personajesData = {}; // doc completo de cada personaje, en vivo — alimenta avatares extra + burbujas
+let personajesData = {}; // existencia/roles, vía Firestore — solo identidad, tráfico mínimo
+let bubbles = JSON.parse(localStorage.getItem('olimpo_bubbles') || '{}'); // {nombre:{text,ts}} — vía P2P, nunca toca servidor
+function saveBubbles(){ localStorage.setItem('olimpo_bubbles', JSON.stringify(bubbles)); }
 
 function avatarUrl(c){
   // gafas/visores serios (sensor, robocop, glow, frame, shade) — nada de ojos
@@ -428,11 +451,11 @@ function renderBoard(){
   const all = CHARS.concat(extraNames.map(function(n){ return {name:n, color:colorFromName(n)}; }));
 
   all.forEach(function(c){
-    const data = personajesData[c.name];
+    const b = bubbles[c.name];
     const safeName = escapeHtml(c.name);
     const div = document.createElement('div');
     div.className = 'char' + (me===c.name ? ' me' : '');
-    const bubble = (data && data.lastMsg) ? '<div class="bubble">'+escapeHtml(data.lastMsg)+'</div>' : '';
+    const bubble = (b && b.text) ? '<div class="bubble">'+escapeHtml(b.text)+'</div>' : '';
     div.innerHTML =
       bubble +
       '<img class="sprite" loading="lazy" alt="'+safeName+'" src="'+avatarUrl(c)+'">' +
@@ -636,9 +659,9 @@ document.getElementById('pinConfirm').onclick = async function(){
   }
 };
 
-/* ---- personajes en vivo: alimenta el conteo, los avatares extra (nicknames)
-   y las burbujas de diálogo sobre cada personaje. Sustituye el chat tipo
-   lista: tu mensaje queda flotando sobre tu avatar hasta que escribas otro. ---- */
+/* ---- personajes en vivo (solo identidad): alimenta el conteo y los avatares
+   extra de nicknames. Firestore aquí solo guarda quién existe y su hash de
+   PIN — tráfico mínimo, ningún mensaje pasa por aquí. ---- */
 onSnapshot(collection(db,'olimpo_personajes'), function(snap){
   const data = {};
   snap.forEach(function(d){ data[d.id] = d.data(); });
@@ -647,21 +670,56 @@ onSnapshot(collection(db,'olimpo_personajes'), function(snap){
   renderBoard();
 });
 
+/* ---- burbujas de diálogo: 100% P2P vía Trystero/Nostr, cero servidor.
+   Cada mensaje se transmite directo a los dispositivos conectados ahora
+   mismo y se guarda solo en el localStorage de cada quien — fragmentado,
+   nadie (ni Jose) tiene jamás el historial completo. ---- */
+let sendBubble = null;
+(function initP2P(){
+  function start(){
+    if(!window.__trystero){ return; } // sin Nostr ni torrent disponibles — el chat queda solo local
+    const room = window.__trystero.joinRoom({ appId: 'olimpo-2-0-v1' }, 'olimpo-club');
+    const [sendB, getB] = room.makeAction('bubble');
+    const [sendS, getS] = room.makeAction('sync');
+    sendBubble = sendB;
+
+    getB(function(data){
+      if(!data || typeof data.name!=='string' || typeof data.text!=='string') return;
+      bubbles[data.name] = { text: data.text.slice(0,80), ts: Date.now() };
+      saveBubbles();
+      renderBoard();
+    });
+    getS(function(data){
+      if(!data || typeof data!=='object') return;
+      Object.keys(data).forEach(function(name){
+        const incoming = data[name];
+        if(incoming && typeof incoming.text==='string' && (!bubbles[name] || (incoming.ts||0) > (bubbles[name].ts||0))){
+          bubbles[name] = { text: String(incoming.text).slice(0,80), ts: incoming.ts||Date.now() };
+        }
+      });
+      saveBubbles();
+      renderBoard();
+    });
+    room.onPeerJoin(function(peerId){
+      sendS(bubbles, peerId); // pones al día al recién llegado con lo que tú ya sabes — redundancia fragmentaria
+    });
+  }
+  if(window.__trystero!==undefined) start();
+  else window.addEventListener('load', start); // por si el loader de trystero aún no terminó
+})();
+
 const msgInput = document.getElementById('msgInput');
 const msgSend = document.getElementById('msgSend');
 
-async function send(){
+function send(){
   const text = msgInput.value.trim();
   if(!text) return;
   if(!me){ alert('Primero toca tu personaje en el tablero y crea tu PIN.'); return; }
   msgInput.value='';
-  try{
-    const ref = doc(db, 'olimpo_personajes', me);
-    await withTimeout(updateDoc(ref, { lastMsg: text, lastMsgAt: serverTimestamp() }), 9000);
-    await addDoc(collection(db,'olimpo_mensajes'), { who: me, text: text, ts: serverTimestamp() }); // historial completo, no se borra
-  }catch(e){
-    alert('No se pudo enviar. Revisa tu conexión.');
-  }
+  bubbles[me] = { text: text, ts: Date.now() };
+  saveBubbles();
+  renderBoard();
+  if(sendBubble) sendBubble({ name: me, text: text }); // directo a los demás dispositivos conectados, nunca a un servidor
 }
 msgSend.onclick = send;
 msgInput.addEventListener('keydown', function(e){ if(e.key==='Enter') send(); });
