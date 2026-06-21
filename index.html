@@ -261,6 +261,15 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
     <div class="panel-title">El Mostrador</div>
     <div id="anuncios-list"><div class="anuncio">Cargando especiales…</div></div>
     <p class="hint">Atiende Jose. Pronto: chatbot 24/7 aquí mismo para pedidos y preguntas.</p>
+    <div class="msg-form" style="margin-top:14px">
+      <input id="dmInput" type="text" maxlength="300" placeholder="Escríbele en privado al Mostrador…">
+      <button class="btn" id="dmSend">Enviar</button>
+    </div>
+    <p class="hint">Privado, cifrado de extremo a extremo — solo lo leen Jose y el staff que él designe. Toca tu personaje arriba antes de escribir.</p>
+    <div id="dmInbox" style="display:none;margin-top:14px">
+      <div class="panel-title" style="margin-bottom:8px">Bandeja del Mostrador</div>
+      <div class="msglist" id="dmList"></div>
+    </div>
   </div>
 
   <div class="panel" id="tablero-panel">
@@ -378,7 +387,7 @@ import {
   initializeFirestore, doc, setDoc, collection, onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
-import { getPublicKey, finalizeEvent, SimplePool } from "https://esm.sh/nostr-tools@2";
+import { getPublicKey, finalizeEvent, SimplePool, nip04 } from "https://esm.sh/nostr-tools@2";
 
 // Identidad real, criptográfica, vía Nostr — tu PIN deriva una llave secp256k1
 // (nunca se transmite ni se guarda, solo vive en tu sesión mientras la usas).
@@ -407,8 +416,20 @@ const app = initializeApp(firebaseConfig);
 // es un poco más lento pero confiable en todas las redes, mobile incluido.
 const db = initializeFirestore(app, { experimentalForceLongPolling: true });
 
-const ADMIN_NAME = 'Jose'; // único personaje con flujo de activación admin
-const ADMIN_SEED = [0,0,0]; // ⚡⚡⚡ — código de activación inicial, solo sirve una vez
+// Personajes de staff con activación gateada por código — no dejan crear
+// cualquier PIN libre la primera vez, hace falta el código de activación
+// (dado fuera de la app) antes de elegir el PIN definitivo. Jose = owner
+// (control total). Juan = webmaster/co-admin (menos permisos que Jose;
+// el alcance exacto de "menos permisos" se define cuando exista moderación
+// real — ver SPEC.md sección 5). Código de Juan: 🔥🔥🔥 hasta que él lo cambie.
+// forceChange=true: el código de activación NO sirve como PIN final, hay
+// que elegir uno nuevo aparte (Jose). forceChange=false: el código YA ES
+// el PIN real, usable de inmediato (Juan: 🔥🔥🔥 hasta que él mismo lo
+// cambie reclamando de nuevo con otro código — rotación de PIN es v1.2).
+const STAFF_SEEDS = {
+  'Jose': { seed:[0,0,0], role:'owner', forceChange:true },       // ⚡⚡⚡
+  'Juan': { seed:[2,2,2], role:'webmaster', forceChange:false }   // 🔥🔥🔥
+};
 
 const CHARS = [
   {name:"Jose", color:"E8A020"},
@@ -450,13 +471,41 @@ let personajesData = {}; // existencia/roles, vía Firestore — solo identidad,
 let bubbles = JSON.parse(localStorage.getItem('olimpo_bubbles') || '{}'); // {nombre:{text,ts}} — vía P2P, nunca toca servidor
 function saveBubbles(){ localStorage.setItem('olimpo_bubbles', JSON.stringify(bubbles)); }
 
+// Avatar cyborg propio (mitad humano / mitad máquina), dibujado en SVG —
+// 100% original, sin depender de packs de terceros con licencia incierta
+// (Flaticon-style requiere atribución o compra). El ojo robótico brilla en
+// el color de cada personaje; humano/máquina se intercambia de lado según
+// el nombre, para que cada quien se vea distinto.
+const SKIN_TONES = ['#E8B894','#C68642','#8D5524','#F2C9A1'];
+const METAL_TONES = ['#8A99A8','#5C6B7A','#7C8C9C','#6E7F90'];
+function seedNum(name){
+  let h=0; for(let i=0;i<name.length;i++){ h=(h*31+name.charCodeAt(i))>>>0; }
+  return h;
+}
 function avatarUrl(c){
-  // gafas/visores serios (sensor, robocop, glow, frame, shade) — nada de ojos
-  // tiernos/redondos/corazones, que se veían infantiles para un club de adultos.
-  return 'https://api.dicebear.com/9.x/bottts-neutral/svg?seed='+encodeURIComponent(c.name)+
-    '&backgroundColor='+c.color+'&backgroundType=solid'+
-    '&eyes='+encodeURIComponent('frame1,frame2,glow,robocop,sensor,shade01')+
-    '&mouth='+encodeURIComponent('diagram,grill01,grill02,grill03,square01,square02');
+  const n = seedNum(c.name);
+  const flip = n % 2 === 0;
+  const skin = SKIN_TONES[n % SKIN_TONES.length];
+  const metal = METAL_TONES[(n >> 2) % METAL_TONES.length];
+  const glow = '#' + c.color;
+  const svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">' +
+      '<defs><clipPath id="h"><circle cx="50" cy="50" r="42"/></clipPath></defs>' +
+      '<g clip-path="url(#h)"' + (flip ? ' transform="scale(-1,1) translate(-100,0)"' : '') + '>' +
+        '<rect x="0" y="0" width="50" height="100" fill="' + skin + '"/>' +
+        '<rect x="50" y="0" width="50" height="100" fill="' + metal + '"/>' +
+        '<rect x="56" y="28" width="16" height="3.5" fill="#00000030"/>' +
+        '<rect x="56" y="36" width="11" height="3.5" fill="#00000030"/>' +
+        '<rect x="56" y="62" width="14" height="3.5" fill="#00000030"/>' +
+        '<path d="M27,40 q7,-4 14,0" stroke="#1a1208" stroke-width="2.2" fill="none" stroke-linecap="round"/>' +
+        '<circle cx="35" cy="49" r="3.6" fill="#1a1208"/>' +
+        '<circle cx="68" cy="49" r="9" fill="none" stroke="' + glow + '" stroke-width="1.6" opacity="0.55"/>' +
+        '<circle cx="68" cy="49" r="5.4" fill="' + glow + '"/>' +
+        '<path d="M37,69 q13,7 26,0" stroke="#1a1208" stroke-width="2.6" fill="none" stroke-linecap="round"/>' +
+      '</g>' +
+      '<circle cx="50" cy="50" r="42" fill="none" stroke="#000" stroke-width="2.5" opacity="0.22"/>' +
+    '</svg>';
+  return 'data:image/svg+xml,' + encodeURIComponent(svg);
 }
 
 const ESC_MAP = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'};
@@ -591,7 +640,7 @@ function withTimeout(promise, ms){
 
 async function claimOrVerify(name){
   pendingName = name;
-  pendingIsOwnerSetup = false; // cada intento empieza limpio — evita que un setup de admin cancelado a medias se filtre a otro personaje
+  pendingStaffRole = null; // cada intento empieza limpio — evita que un setup de staff cancelado a medias se filtre a otro personaje
   pendingClaimPubkey = null;
   resetModal();
   // Abrimos el modal YA, con estado de carga visible — antes el modal solo
@@ -607,13 +656,13 @@ async function claimOrVerify(name){
       pendingClaimPubkey = claim.pubkey;
       pinTitle.textContent = 'Ingresa tu PIN';
       pinSub.textContent = name + ' ya tiene PIN. Ingresa tus 3 símbolos en orden.';
-    } else if(name === ADMIN_NAME){
-      // Jose es el admin del tablero: para activar su personaje por primera
-      // vez hace falta el código de activación (dado por el equipo), no
-      // cualquier PIN libre como el resto. En cuanto lo activa, elige su PIN
-      // definitivo y el código de activación deja de tener uso.
+    } else if(STAFF_SEEDS[name]){
+      // Personajes de staff: para activarlos por primera vez hace falta el
+      // código de activación (dado por el equipo), no cualquier PIN libre
+      // como el resto. En cuanto lo activan, eligen su PIN definitivo y el
+      // código de activación deja de tener uso.
       pendingMode = 'admin-seed';
-      pinTitle.textContent = 'Activar panel de Jose';
+      pinTitle.textContent = 'Activar ' + name;
       pinSub.textContent = 'Ingresa el código de activación inicial (te lo dimos aparte). Luego eliges tu PIN definitivo.';
     } else {
       pendingMode = 'create';
@@ -625,25 +674,31 @@ async function claimOrVerify(name){
     pinSub.textContent = 'No se pudo conectar a los relés de Nostr. Revisa tu internet y vuelve a tocar tu personaje.';
   }
 }
-let pendingName=null, pendingMode=null, pendingIsOwnerSetup=false, pendingClaimPubkey=null;
+let pendingName=null, pendingMode=null, pendingStaffRole=null, pendingClaimPubkey=null;
 
 document.getElementById('pinConfirm').onclick = async function(){
   if(!pendingMode){ pinError.textContent='Aún no se confirma la conexión. Espera un momento.'; return; }
   if(picked.length<3){ pinError.textContent='Elige 3 símbolos.'; return; }
 
   if(pendingMode==='admin-seed'){
-    if(picked.join('|') !== ADMIN_SEED.join('|')){
+    const staff = STAFF_SEEDS[pendingName];
+    if(!staff || picked.join('|') !== staff.seed.join('|')){
       pinError.textContent = 'Código de activación incorrecto.';
       clearPicked();
       return;
     }
-    pendingIsOwnerSetup = true;
+    pendingStaffRole = staff.role;
+    if(staff.forceChange){
+      pendingMode = 'create';
+      clearPicked();
+      pinError.textContent='';
+      pinTitle.textContent = 'Elige tu PIN definitivo';
+      pinSub.textContent = 'Activado. Ahora elige los 3 símbolos que serán tu llave — el código de activación ya no sirve.';
+      return;
+    }
+    // forceChange=false: el código de activación ya es el PIN real — seguimos
+    // directo a crear el claim con estos mismos símbolos, sin pedir otro.
     pendingMode = 'create';
-    clearPicked();
-    pinError.textContent='';
-    pinTitle.textContent = 'Elige tu PIN definitivo';
-    pinSub.textContent = 'Activado. Ahora elige los 3 símbolos que serán tu llave de admin — el código de activación ya no sirve.';
-    return;
   }
 
   try{
@@ -653,7 +708,7 @@ document.getElementById('pinConfirm').onclick = async function(){
     const myPubkey = getPublicKey(secretKey);
 
     if(pendingMode==='create'){
-      const role = pendingIsOwnerSetup ? 'owner' : 'member';
+      const role = pendingStaffRole || 'member';
       const tmpl = {
         kind: 30078, created_at: Math.floor(Date.now()/1000),
         tags: [['d','olimpo-claim-'+pendingName]], content: JSON.stringify({ role: role })
@@ -666,14 +721,14 @@ document.getElementById('pinConfirm').onclick = async function(){
       setDoc(doc(db,'olimpo_personajes',pendingName), { pubkey: myPubkey, role: role }).catch(function(){});
 
       var codigo = picked.join('-');
-      var wasOwnerSetup = pendingIsOwnerSetup;
-      pendingIsOwnerSetup = false;
+      var wasStaffSetup = !!pendingStaffRole;
+      pendingStaffRole = null;
       me = pendingName;
       localStorage.setItem('olimpo_me', me);
       localStorage.setItem('olimpo_pin', JSON.stringify(picked));
       closeModal();
       renderBoard();
-      alert((wasOwnerSetup ? 'Panel de Jose activado. ' : 'Listo. ') + 'Tu código de respaldo es ' + codigo + ' — anótalo. Sirve igual que tus emojis para volver a entrar como ' + pendingName + '.');
+      alert((wasStaffSetup ? 'Panel de ' + pendingName + ' activado. ' : 'Listo. ') + 'Tu código de respaldo es ' + codigo + ' — anótalo. Sirve igual que tus emojis para volver a entrar como ' + pendingName + '.');
       return;
     } else {
       if(myPubkey !== pendingClaimPubkey){
@@ -701,6 +756,7 @@ onSnapshot(collection(db,'olimpo_personajes'), function(snap){
   personajesData = data;
   onlineCountEl.textContent = String(snap.size); // el sufijo " en el club" ya está en el HTML del pill
   renderBoard();
+  loadDmInbox();
 });
 
 /* ---- burbujas de diálogo: 100% P2P vía Trystero/Nostr, cero servidor.
@@ -791,6 +847,88 @@ msgInput.addEventListener('keydown', function(e){ if(e.key==='Enter') send(); })
     renderBoard();
   }catch(e){}
 })();
+
+/* ---- DM al Mostrador: privado, cifrado extremo a extremo (NIP-04), para
+   Jose y el staff que él designe — aparte del chat general de burbujas.
+   El staff "oficial" (Jose, Juan) viene de STAFF_SEEDS, fuente autoritativa
+   en Nostr; el espejo de Firebase puede sumar más designados a futuro pero
+   NUNCA es requisito — si el espejo aún no escribe (reglas sin actualizar
+   en la consola), Jose y Juan igual reciben y leen sus DMs sin problema. ---- */
+async function getStaffNames(){
+  const names = new Set(Object.keys(STAFF_SEEDS));
+  Object.keys(personajesData).forEach(function(n){
+    var r = personajesData[n] && personajesData[n].role;
+    if(r && r !== 'member') names.add(n);
+  });
+  return Array.from(names);
+}
+async function getStaffPubkeys(){
+  const names = await getStaffNames();
+  const pubkeys = [];
+  for(const n of names){
+    try{
+      const claim = await getCanonicalClaim(n);
+      if(claim) pubkeys.push(claim.pubkey);
+    }catch(e){}
+  }
+  return pubkeys;
+}
+
+document.getElementById('dmSend').onclick = async function(){
+  const input = document.getElementById('dmInput');
+  const text = input.value.trim();
+  if(!text) return;
+  if(!me){ alert('Primero toca tu personaje en el tablero y crea tu PIN.'); return; }
+  const pinArr = JSON.parse(localStorage.getItem('olimpo_pin')||'null');
+  if(!pinArr){ alert('No se encontró tu PIN en este navegador. Vuelve a tocar tu personaje.'); return; }
+  input.value='';
+  try{
+    const recipients = await getStaffPubkeys();
+    if(!recipients.length){ alert('Aún no hay nadie en el staff para recibir mensajes.'); return; }
+    const mySecretKey = await deriveSecretKey(me, pinArr);
+    for(const recipientPubkey of recipients){
+      const cipher = await nip04.encrypt(mySecretKey, recipientPubkey, '['+me+'] '+text);
+      const tmpl = { kind:4, created_at: Math.floor(Date.now()/1000), tags:[['p', recipientPubkey]], content: cipher };
+      const signed = finalizeEvent(tmpl, mySecretKey);
+      pool.publish(RELAYS, signed);
+    }
+    alert('Enviado al Mostrador, en privado.');
+  }catch(e){
+    alert('No se pudo enviar. Revisa tu conexión.');
+  }
+};
+
+/* ---- bandeja del Mostrador: solo se arma si TÚ eres staff — descifra los
+   DMs dirigidos a tu propia llave. Nadie más puede leerlos, ni siquiera
+   los relés que los transportan (solo ven el texto cifrado). ---- */
+async function loadDmInbox(){
+  const inboxBox = document.getElementById('dmInbox');
+  if(!me){ inboxBox.style.display='none'; return; }
+  const mirrorRole = personajesData[me] && personajesData[me].role;
+  const isStaff = !!STAFF_SEEDS[me] || (mirrorRole && mirrorRole!=='member');
+  if(!isStaff){ inboxBox.style.display='none'; return; }
+  const pinArr = JSON.parse(localStorage.getItem('olimpo_pin')||'null');
+  if(!pinArr) return;
+  try{
+    const mySecretKey = await deriveSecretKey(me, pinArr);
+    const myPubkey = getPublicKey(mySecretKey);
+    const events = await withTimeout(pool.querySync(RELAYS, { kinds:[4], '#p':[myPubkey], limit:50 }), 8000);
+    events.sort(function(a,b){ return b.created_at-a.created_at; });
+    const list = document.getElementById('dmList');
+    if(!events.length){ list.innerHTML='<div class="msg-empty">Sin mensajes privados todavía.</div>'; }
+    else{
+      const items = await Promise.all(events.map(async function(ev){
+        try{
+          const plain = await nip04.decrypt(mySecretKey, ev.pubkey, ev.content);
+          const when = new Date(ev.created_at*1000).toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit'});
+          return '<div class="msg"><span class="when">'+when+'</span>'+escapeHtml(plain)+'</div>';
+        }catch(e){ return ''; }
+      }));
+      list.innerHTML = items.join('') || '<div class="msg-empty">Sin mensajes privados todavía.</div>';
+    }
+    inboxBox.style.display='block';
+  }catch(e){}
+}
 
 /* ---- mostrador (especiales) + eventos y anuncios (novedades) — mismo ofertas.json ---- */
 fetch('ofertas.json').then(function(r){return r.json()}).then(function(d){

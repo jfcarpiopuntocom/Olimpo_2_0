@@ -19,14 +19,16 @@ Look: 1/3 ancestral · 1/3 grecorromano · 1/3 futurista · 1% sensual/sexy, sie
 **La identidad ya NO depende de una base de datos central.** Tu PIN deriva una llave secp256k1 real (la misma criptografía de Bitcoin/Nostr), y "ser dueño" de un nombre se demuestra firmando un evento — publicado en relés públicos de Nostr, verificable por cualquiera, sin pedirle permiso a nadie ni confiar en un servidor.
 
 - 11 personajes fundadores: Jose, David, Fer, Mateo, Kevin, Matto, Mateo Tusisabes, Juan, Anahi, Laura, Maria. Cualquiera suma uno propio tocando "+ Nuevo" — nickname libre (2-20 caracteres), **nunca se pide ni se guarda nombre real**.
-- Avatares vía **DiceBear "bottts-neutral"** (robots, MIT, uso comercial libre, sin attribution: https://www.dicebear.com/licenses/). Gafas/visores fijados a variantes serias estilo "rave anónimo" (`eyes=frame1,frame2,glow,robocop,sensor,shade01`) — nada tierno/infantil.
+- **Avatares cyborg propios, dibujados en SVG** — mitad rostro humano, mitad panel metálico con ojo robótico brillante en el color de cada personaje. 100% original (función `avatarUrl` en `index.html`, genera el SVG por código, ningún asset de terceros) — se descartó usar un pack tipo Flaticon "Cyborg" porque esa licencia requiere atribución o compra; esto evita el problema de raíz y queda más integrado a la identidad visual del club.
 - **PIN de 3 símbolos, 30 emojis (3 por dígito 0-9) — salvaguarda anti-espionaje de hombro.** Quien te ve tocar un emoji no puede deducir tu dígito real sin el mapeo (`PIN_DIGIT_OF` en el código). Emoji y dígito son la MISMA llave — el hash/derivación se calcula sobre el dígito real, no sobre el emoji.
 - **Cómo funciona la identidad (NIP-33, eventos direccionables):**
   1. Tu PIN (3 dígitos, venga de emoji o teclado numérico) + tu nombre/nickname → `sha256('olimpo-v1|'+nombre+'|'+digitos)` → llave secreta secp256k1. Esta llave **nunca se transmite ni se guarda en ningún lado** — se deriva de nuevo cada vez que la necesitas, vive solo en la memoria de tu sesión.
   2. Para reclamar un nombre por primera vez: firmas un evento `kind 30078` con tag `['d','olimpo-claim-{nombre}']` y lo publicas en 4 relés públicos (`relay.damus.io`, `nos.lol`, `relay.nostr.band`, `relay.snort.social`). Basta con que UNO lo acepte.
   3. Para verificar quién es el dueño real: se consultan los 4 relés por todos los eventos con ese `d`-tag; el de **`created_at` más antiguo** es el canónico — "primer claim, gana". Si tu llave deriva el mismo `pubkey` que ese evento, eres tú; si no, el PIN es incorrecto.
-  4. **Jose, admin del tablero:** activación especial. Tocar "Jose" sin que nadie lo haya reclamado pide un código de activación (⚡⚡⚡ = dígitos `0,0,0`, dado por el equipo fuera de la app) antes de dejar elegir el PIN definitivo — así nadie puede reclamar "Jose" por accidente o malicia con un PIN cualquiera. Su evento de claim queda con `role:'owner'` en el contenido.
-- **Verificado funcionando en vivo** (no solo en teoría): se probó el flujo completo en este repo — activación de Jose, publicación del evento en relés reales, y consulta independiente confirmando el claim visible en `relay.damus.io`/`nos.lol`.
+  4. **Staff con activación gateada (`STAFF_SEEDS` en el código):** tocar su nombre sin que nadie lo haya reclamado pide un código de activación antes de dejar usar/elegir el PIN — así nadie puede reclamarlos por accidente o malicia.
+     - **Jose** (owner, control total): código ⚡⚡⚡ (dígitos `0,0,0`). `forceChange:true` — el código solo activa, de inmediato debe elegir un PIN definitivo distinto.
+     - **Juan** (webmaster/co-admin, menos permisos que Jose — alcance exacto pendiente de definir cuando exista moderación real): código 🔥🔥🔥 (dígitos `2,2,2`). `forceChange:false` — el código YA es su PIN real, utilizable de inmediato. Rotarlo a otro PIN más adelante es una función pendiente (ver Roadmap), por ahora cambiarlo requeriría coordinarlo aparte.
+- **Verificado funcionando en vivo, con datos reales** (no solo en teoría): Jose y Juan ya están activados de verdad — sus eventos de claim están publicados y son consultables ahora mismo en `relay.damus.io`/`nos.lol`/`relay.nostr.band`/`relay.snort.social`. El club ya puede usarse.
 - **Firebase = espejo de cortesía, no fuente de verdad.** Tal como se pidió ("cositas en Firebase por redundancia, sin problema"): cada claim también se escribe best-effort (nunca bloquea, si falla no pasa nada) a Firestore (`olimpo_personajes/{nombre}` con `pubkey` + `role`) — sirve solo para que la app pueda listar nicknames existentes sin tener que adivinarlos en los relés. Si Firebase desapareciera mañana, la identidad real sigue intacta en Nostr.
 - **Recuperación de acceso:** si pierdes tu PIN, no hay self-service — nadie puede "resetear" una llave criptográfica derivada (esa es la idea: ni Jose, ni nosotros, ni nadie tiene una puerta trasera). La única opción es elegir un nuevo nickname y empezar de cero. Esto es una propiedad de seguridad, no una limitación a arreglar.
 
@@ -42,18 +44,23 @@ Look: 1/3 ancestral · 1/3 grecorromano · 1/3 futurista · 1% sensual/sexy, sie
 - **Verificado funcionando en vivo:** mensaje de prueba publicado y recuperado independientemente desde `relay.damus.io` y `nos.lol` en este repo.
 - **Seguridad:** nickname y texto se escapan (`escapeHtml`) antes de insertarse en el DOM (previene XSS). Nicknames con "/" se rechazan.
 
-### 3. El Mostrador: especiales + chatbot — PARCIAL
+### 3. El Mostrador: especiales + DM privado al staff + chatbot — IMPLEMENTADO (DM), PARCIAL (chatbot)
 - Especiales del día/semana ya maquetados, editables a mano vía `ofertas.json` (sin tocar código).
-- **"Atiende Jose" por ahora** — su personaje en el tablero es, de hecho, el primer "chatbot": cualquiera puede dejarle un mensaje y él responde como cualquier otro miembro, vía las burbujas P2P. Cuando se conecte un chatbot automatizado, hereda exactamente ese mismo canal (mismo tablero, misma identidad de personaje) — no hace falta UI nueva.
-- **Chatbot automatizado (roadmap, no implementado):** recomendado **Tawk.to** (gratis, sin límite, widget de una línea, respuestas predefinidas — bueno para upselling/especial del día) como primera capa simple. Para algo más "ente vivo" — que conteste como si fuera Jose o la barra, con personalidad, en DMs o en el mostrador — la vía natural una vez exista mensajería privada (ver Roadmap) es un bot que escucha el mismo canal Nostr/P2P y responde firmando como su propio personaje. Documentado, no construido — falta decidir el motor (Tawk.to vs bot propio) antes de built.
+- **DM privado, cifrado de extremo a extremo (NIP-04) — IMPLEMENTADO y verificado en vivo.** Aparte del chat general (burbujas, público), el Mostrador tiene su propio campo: "Escríbele en privado al Mostrador". Al enviar, el mensaje se cifra por separado para cada miembro del staff (Jose + Juan, vía `STAFF_SEEDS`, más cualquiera que el espejo de Firebase marque con `role !== 'member'`) y se publica como evento `kind 4` en los mismos 4 relés. Solo quien tiene la llave privada correspondiente puede descifrarlo — ni los relés, ni Firebase, ni nadie más ve el texto plano.
+  - Si entras como Jose o Juan, ves automáticamente la **"Bandeja del Mostrador"** debajo del campo de DM: consulta los relés por eventos dirigidos a tu pubkey y los descifra en el momento, en tu navegador.
+  - **No depende del espejo de Firebase para funcionar** — la lista de destinatarios se resuelve consultando los claims reales de Jose/Juan en Nostr (`getStaffPubkeys`), así que el DM funciona aunque las reglas de Firestore todavía no estén actualizadas en la consola.
+  - Verificado en vivo: mensaje de prueba cifrado, publicado, y descifrado correctamente en la Bandeja del Mostrador, en este repo.
+- **"Atiende Jose" en el chat general** — su personaje en el tablero es, de hecho, el primer "chatbot": cualquiera puede dejarle un mensaje público y él responde como cualquier otro miembro, vía las burbujas P2P.
+- **Chatbot automatizado (roadmap, no implementado):** recomendado **Tawk.to** (gratis, sin límite, widget de una línea, respuestas predefinidas — bueno para upselling/especial del día) como primera capa simple. Para algo más "ente vivo" — que conteste con personalidad, en el DM o en el mostrador — la vía natural es un bot que escucha el mismo canal Nostr (kind 1 público y/o kind 4 privado) y responde firmando como su propio personaje; la infraestructura de DM cifrado ya está lista para que ese bot la use. Documentado, no construido — falta decidir el motor.
 
 ### 4. Radio — IMPLEMENTADO (live, sin mp3)
 - Mismo motor que `ajedrez-16bit`: 4 emisoras online en vivo vía **radio-browser.info** (gratis, sin auth) + streams pinned como respaldo, fallback automático si caen.
 - Progressive House (SomaFM Beat Blender) · Electrónica 70s (SomaFM Drone Zone) · Progressive Lounge (SomaFM Groove Salad) · Burning Man/Playa (SomaFM Deep Space One). Botón Stop.
 
 ### 5. Admin / moderación
-- Jose = owner (`role:'owner'` en su claim de Nostr, ver sección 1).
-- Falta construir las acciones de moderación en sí (mute/ban) — v1.2. Sin un servidor central, mute/ban probablemente se implementa como "lista de pubkeys bloqueados" que cada cliente respeta localmente (firmada/publicada por Jose), no como un borrado real — coherente con la filosofía P2P de esta app.
+- Jose = owner, Juan = webmaster/co-admin (ambos con `role` en su claim de Nostr, ver sección 1 — `STAFF_SEEDS` en el código).
+- Falta construir las acciones de moderación en sí (mute/ban) y el alcance exacto de "menos permisos" para Juan — v1.2. Sin un servidor central, mute/ban probablemente se implementa como "lista de pubkeys bloqueados" que cada cliente respeta localmente (firmada/publicada por Jose), no como un borrado real — coherente con la filosofía P2P de esta app.
+- **Rotación de PIN (pedida implícitamente, no implementada):** hoy nadie puede cambiar su PIN una vez reclamado (es justo lo que da la seguridad: nadie tiene una puerta trasera). Juan pidió poder cambiar su 🔥🔥🔥 más adelante — la vía limpia es un "evento de sucesión" firmado por la llave VIEJA que apunte a la llave NUEVA, que `getCanonicalClaim` aprenda a seguir. v1.2.
 - **Google Sign-In para Jose (pedido, no implementado):** capa extra opcional sobre la activación por código — requiere su Gmail real y habilitar el proveedor en Firebase Console. No se construye hasta tener esos datos.
 
 ## Archivos del repo
@@ -69,8 +76,8 @@ Look: 1/3 ancestral · 1/3 grecorromano · 1/3 futurista · 1% sensual/sexy, sie
 
 ## Roadmap (pedido, aún sin construir — documentado para no prometer de más)
 - **Lounge virtual con streams/DJs en vivo**
-- **Mensajes privados (DMs)** entre personajes — base natural para esto: NIP-04/NIP-44 de Nostr (mensajes cifrados extremo a extremo), ya tenemos las llaves derivadas del PIN listas para usarse
+- **DMs entre personajes cualquiera** (hoy el DM solo existe hacia el staff del Mostrador, no persona-a-persona) — misma base NIP-04 ya construida, solo falta la UI
 - **Pre-pedidos y pedidos a la barra de Jose**
 - **Reservaciones de espacio** (medicina del futuro, DJs que quieren poner música)
-- **Chatbot/ente vivo** en el Mostrador y/o DMs (ver sección 3)
-- Mute/ban reales (ver sección 5)
+- **Chatbot/ente vivo** en el Mostrador (ver sección 3)
+- Mute/ban reales, rotación de PIN, permisos exactos de webmaster (ver sección 5)
