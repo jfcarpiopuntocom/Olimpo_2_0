@@ -412,24 +412,22 @@ async function getCanonicalClaim(name){
   const events = await withTimeout(pool.querySync(RELAYS, { kinds:[30078], '#d':['olimpo-claim-'+name], limit:50 }), 9000);
   if(!events.length) return null;
   events.sort(function(a,b){ return a.created_at-b.created_at; }); // el más antiguo manda — primer claim, gana
-  let pubkey = events[0].pubkey;
-  let watermark = events[0].created_at;
-  let moved = true;
-  while(moved){
-    moved = false;
-    const candidates = events.filter(function(ev){ return ev.pubkey===pubkey && ev.created_at>watermark; });
-    candidates.sort(function(a,b){ return b.created_at-a.created_at; });
-    const rotation = candidates[0];
-    if(rotation){
-      let data; try{ data = JSON.parse(rotation.content); }catch(e){ data = null; }
-      if(data && data.supersededBy){
-        pubkey = data.supersededBy;
-        watermark = rotation.created_at;
-        moved = true;
-      }
-    }
+  // Nostr ya colapsa el historial: dos eventos del MISMO pubkey+kind+d-tag no
+  // coexisten, el relé solo guarda el más reciente (evento "reemplazable").
+  // Por eso el evento de rotación de una pubkey reemplaza in-place a su claim
+  // original — no hace falta buscar "uno más nuevo del mismo pubkey", el que
+  // tenemos YA es el más nuevo. Solo seguimos el puntero supersededBy.
+  let current = events[0];
+  const visited = new Set();
+  while(current && !visited.has(current.pubkey)){
+    visited.add(current.pubkey);
+    let data; try{ data = JSON.parse(current.content); }catch(e){ data = null; }
+    if(!data || !data.supersededBy || data.supersededBy===current.pubkey) break;
+    const next = events.find(function(e){ return e.pubkey===data.supersededBy; });
+    if(next){ current = next; continue; }
+    return { pubkey: data.supersededBy }; // la llave nueva nunca publicó nada propio, pero el puntero es válido
   }
-  return { pubkey: pubkey };
+  return { pubkey: current.pubkey };
 }
 
 const app = initializeApp(firebaseConfig);
