@@ -12,7 +12,12 @@
 <meta property="og:title" content="OLIMPO 2.0 — Consola del Club">
 <meta property="og:description" content="Tablero de personajes, anuncios y radio en vivo. A donde vas cuando extrañas a tu gente del Olimpo.">
 <meta property="og:type" content="website">
-<meta property="og:image" content="https://raw.githubusercontent.com/jfcarpiopuntocom/Olimpo_2_0/main/photo_2_2026-06-20_14-28-03.jpg">
+<meta property="og:image" content="https://raw.githubusercontent.com/jfcarpiopuntocom/Olimpo_2_0/main/avatars/masthead.jpg">
+<meta property="og:image:width" content="1040">
+<meta property="og:image:height" content="520">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/png" href="avatars/pelusa.png">
+<link rel="apple-touch-icon" href="avatars/pelusa.png">
 
 <style>
 :root{
@@ -124,6 +129,9 @@ main.console{max-width:1280px;margin:0 auto;padding:14px;display:flex;flex-direc
 }
 .char:active{transform:scale(.96)}
 .char.me{border-color:var(--jade);box-shadow:0 0 0 2px rgba(40,236,170,.3)}
+.char.is-active .sprite{box-shadow:0 0 0 2px var(--jade), 0 0 14px 2px rgba(40,236,170,.55);animation:haloPulse 2.4s ease-in-out infinite}
+@keyframes haloPulse{0%,100%{box-shadow:0 0 0 2px var(--jade), 0 0 10px 1px rgba(40,236,170,.35)}50%{box-shadow:0 0 0 2px var(--jade), 0 0 18px 4px rgba(40,236,170,.75)}}
+@media (prefers-reduced-motion: reduce){.char.is-active .sprite{animation:none}}
 .sprite{
   width:52px;height:52px;margin:0 auto 6px;border-radius:50%;
   display:block;object-fit:cover;object-position:center 18%;
@@ -263,7 +271,7 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
 
 <header>
   <h1 class="wordmark-sr">Olimpo 2.0</h1>
-  <div class="online-pill"><span class="online-dot"></span><span id="onlineCount">11</span> en el club</div>
+  <div class="online-pill"><span class="online-dot"></span><span id="onlineLabel">llegando al club</span></div>
 </header>
 
 <div class="boot">
@@ -585,7 +593,7 @@ const PIN_DIGIT_OF = [0,1,2,3,4,5,6,7,8,9, 0,1,2,3,4,5,6,7,8,9, 0,1,2,3,4,5,6,7,
 
 const board = document.getElementById('board');
 const whoami = document.getElementById('whoami');
-const onlineCountEl = document.getElementById('onlineCount');
+const onlineCountEl = document.getElementById('onlineLabel');
 let me = localStorage.getItem('olimpo_me') || null;
 let personajesData = {}; // existencia/roles, vía Firestore — solo identidad, tráfico mínimo
 let bubbles = JSON.parse(localStorage.getItem('olimpo_bubbles') || '{}'); // {nombre:{text,ts}} — vía P2P, nunca toca servidor
@@ -637,7 +645,10 @@ function renderBoard(){
       const bubbleAlive = b && b.text && (Date.now() - (b.ts||0) < BUBBLE_LIFESPAN_MS);
       const safeName = escapeHtml(c.name);
       const div = document.createElement('div');
-      div.className = 'char' + (me===c.name ? ' me' : '');
+      const ls = personajesData[c.name] && personajesData[c.name].lastSeen;
+      const lsMs = ls && ls.toMillis ? ls.toMillis() : (typeof ls==='number'?ls:0);
+      const isActive = lsMs >= (Date.now() - 2*60*60*1000);
+      div.className = 'char' + (me===c.name ? ' me' : '') + (isActive ? ' is-active' : '');
       const bubble = bubbleAlive ? '<div class="bubble">'+escapeHtml(b.text)+'</div>' : '';
       div.innerHTML =
         bubble +
@@ -949,7 +960,7 @@ onSnapshot(collection(db,'olimpo_personajes'), function(snap){
     const ms = ls && ls.toMillis ? ls.toMillis() : 0;
     if(ms >= cutoff) active++;
   });
-  onlineCountEl.textContent = String(active); // el sufijo " en el club" ya está en el HTML del pill
+  onlineCountEl.textContent = active >= 1 ? (active + ' en el club') : 'llegando al club';
   renderBoard();
   loadDmInbox();
   // Nostr (tu llave/emoji) manda sobre el espejo de Firebase, siempre — el
