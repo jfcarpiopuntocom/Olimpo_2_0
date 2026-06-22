@@ -65,14 +65,21 @@ body{
 /* ---- topbar ---- */
 header{
   position:sticky;top:0;z-index:50;
-  background:var(--bg2);
+  background:
+    linear-gradient(90deg, rgba(8,7,14,.2) 0%, rgba(8,7,14,.6) 75%),
+    url('avatars/masthead.jpg') center 38%/cover no-repeat,
+    var(--bg2);
   border-bottom:2px solid var(--gold);
   padding:6px 16px;
-  display:flex;align-items:center;justify-content:space-between;
+  min-height:84px;
+  display:flex;align-items:center;justify-content:flex-end;
 }
-.wordmark-logo{height:40px;display:block}
+@media(min-width:480px){header{min-height:104px}}
+@media(min-width:768px){header{min-height:130px}}
+.wordmark-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
 .online-pill{
   font-size:.82rem;border:1px solid var(--jade);border-radius:20px;padding:4px 10px;
+  background:rgba(11,10,18,.55);
   color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important;
 }
 .online-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--jade);margin-right:6px;animation:pulse 1.6s infinite}
@@ -145,7 +152,8 @@ main.console{max-width:1280px;margin:0 auto;padding:14px;display:flex;flex-direc
 }
 @keyframes bubbleIn{from{opacity:0;transform:translateX(-50%) translateY(4px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
 
-.whoami{font-family:Arial,sans-serif;font-size:.9rem;color:var(--text2) !important;-webkit-text-fill-color:var(--text2) !important;margin-bottom:12px}
+.tablero-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.whoami{font-family:Arial,sans-serif;font-size:.9rem;color:var(--text2) !important;-webkit-text-fill-color:var(--text2) !important}
 .whoami b{color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important}
 
 /* ---- anuncios ---- */
@@ -254,7 +262,7 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
 <body>
 
 <header>
-  <img class="wordmark-logo" src="avatars/logo.png" alt="Olimpo 2.0">
+  <h1 class="wordmark-sr">Olimpo 2.0</h1>
   <div class="online-pill"><span class="online-dot"></span><span id="onlineCount">11</span> en el club</div>
 </header>
 
@@ -265,8 +273,10 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
 <main class="console">
 
   <div class="panel club-main" id="tablero-panel">
-    <div class="panel-title">Tablero · ¿Quién eres?</div>
-    <div class="whoami" id="whoami">Toca tu personaje para tomar el control.</div>
+    <div class="tablero-head">
+      <div class="panel-title" style="margin-bottom:0">Tablero · ¿Quién eres?</div>
+      <div class="whoami" id="whoami">Toca tu personaje para tomar el control.</div>
+    </div>
     <div class="board" id="board"></div>
     <div class="msg-form" style="margin-top:14px">
       <input id="msgInput" type="text" maxlength="80" placeholder="Di algo — aparece sobre tu personaje…">
@@ -287,8 +297,11 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
       </div>
       <p class="hint">Privado, cifrado de extremo a extremo — solo lo lees vos y el staff que responde. Toca tu personaje arriba antes de escribir.</p>
       <div id="dmInbox" style="display:none;margin-top:14px">
-        <div class="panel-title" style="margin-bottom:8px">Bandeja del Mostrador</div>
-        <div class="msglist" id="dmList"></div>
+        <div class="panel-title" id="dmInboxToggle" style="margin-bottom:0;cursor:pointer;display:flex;align-items:center;justify-content:space-between">
+          <span>Bandeja del Mostrador <span id="dmCount" style="color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important"></span></span>
+          <span id="dmCaret" style="color:var(--ember) !important;-webkit-text-fill-color:var(--ember) !important">▸</span>
+        </div>
+        <div class="msglist" id="dmList" style="display:none;margin-top:8px"></div>
       </div>
     </div>
 
@@ -298,11 +311,9 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
     </div>
 
     <div class="panel" id="confianza-panel">
-      <div class="panel-title">Confidencialidad y control total del usuario</div>
-      <p class="trust-text">Olimpo 2.0 es un espacio para actividades culturales y educativas alrededor de plantas maestras: café, charlas, cine, arte y comunidad.</p>
-      <p class="trust-text">Tu PIN nunca se guarda como texto — deriva una llave criptográfica que solo vive en tu navegador. Ni Jose ni nadie del club puede ver ni recuperar tu PIN. Jose solo puede <b>liberar</b> un personaje si pierdes acceso.</p>
-      <p class="trust-text">No pedimos ni guardamos tu nombre real. Elige cualquier nickname tocando "+ Nuevo" en el tablero — eso es lo único que queda registrado.</p>
-      <p class="trust-text"><b>Stack:</b> identidad real en <b>Nostr</b> (llaves secp256k1, las mismas de Bitcoin) · chat <b>P2P directo</b> vía WebRTC (Trystero) sin servidor central · mensajes privados <b>cifrados de extremo a extremo</b> (NIP-04) · ningún historial completo vive en un solo lugar — fragmentado entre relés públicos y tu propio dispositivo.</p>
+      <div class="panel-title">Confidencialidad</div>
+      <p class="trust-text">Sin nombres reales. Tu PIN nunca se guarda — deriva una llave que solo vive en tu navegador, nadie puede verla ni recuperarla.</p>
+      <p class="trust-text"><b>Stack:</b> identidad en <b>Nostr</b> (llaves secp256k1, las mismas de Bitcoin) · chat <b>P2P</b> vía WebRTC sin servidor central · mensajes privados <b>cifrados extremo a extremo</b> (NIP-04) · ningún historial completo vive en un solo lugar.</p>
     </div>
 
   </aside>
@@ -375,10 +386,14 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
 <div class="pin-overlay" id="historyOverlay">
   <div class="pin-box" style="max-width:440px">
     <h3>Chat del club</h3>
-    <p>Últimos 40 mensajes, con hora — para quien quiera leer lo de antes.</p>
-    <div class="msglist" id="historyList" style="max-height:50vh"><div class="msg-empty">Cargando…</div></div>
-    <div class="pin-actions">
-      <button class="btn" id="historyClose" style="flex:1">Cerrar</button>
+    <p>Últimos 50 mensajes del club.</p>
+    <div class="msglist" id="clubChatList" style="max-height:50vh"><div class="msg-empty">Cargando…</div></div>
+    <div class="pin-actions" style="flex-direction:column;gap:8px">
+      <button class="btn" id="menuChangeNick">Cambiar nickname</button>
+      <button class="btn" id="menuChangeAvatar">Cambiar avatar</button>
+      <button class="btn" id="menuChangePin">Cambiar PIN</button>
+      <button class="btn" id="menuResetRequest">Pedir reset a Jose</button>
+      <button class="btn pin-cancel" id="menuClose" style="flex:1">Cerrar</button>
     </div>
   </div>
 </div>
@@ -615,27 +630,29 @@ function renderBoard(){
   const all = CHARS.concat(extraNames.map(function(n){ return {name:n, color:colorFromName(n)}; }));
 
   all.forEach(function(c){
-    const b = bubbles[c.name];
-    const bubbleAlive = b && b.text && (Date.now() - (b.ts||0) < BUBBLE_LIFESPAN_MS);
-    const safeName = escapeHtml(c.name);
-    const div = document.createElement('div');
-    div.className = 'char' + (me===c.name ? ' me' : '');
-    const bubble = bubbleAlive ? '<div class="bubble">'+escapeHtml(b.text)+'</div>' : '';
-    div.innerHTML =
-      bubble +
-      '<img class="sprite" loading="lazy" alt="'+safeName+'" src="'+avatarUrl(c)+'">' +
-      '<div class="char-name">'+safeName+'</div>' +
-      '<div class="char-status">'+(me===c.name?'Eres tú':'en el club')+'</div>';
-    // Si ya eres tú, no hace falta volver a poner el PIN — quedas
-    // identificado de forma persistente (localStorage) hasta que cambies de
-    // avatar/nickname o Jose resetee tu personaje. Tocar tu propio tile no
-    // hace nada (ya estás "adentro"); cambiar avatar tiene su propio enlace.
-    div.onclick = (me===c.name) ? null : function(){ claimOrVerify(c.name); };
-    const bubbleEl = div.querySelector('.bubble');
-    if(bubbleEl){
-      bubbleEl.onclick = function(e){ e.stopPropagation(); openHistory(); };
-    }
-    board.appendChild(div);
+    // try/catch por personaje: una entrada corrupta (avatar/nombre raro) no
+    // debe romper el render ni el binding de click del resto del tablero.
+    try{
+      const b = bubbles[c.name];
+      const bubbleAlive = b && b.text && (Date.now() - (b.ts||0) < BUBBLE_LIFESPAN_MS);
+      const safeName = escapeHtml(c.name);
+      const div = document.createElement('div');
+      div.className = 'char' + (me===c.name ? ' me' : '');
+      const bubble = bubbleAlive ? '<div class="bubble">'+escapeHtml(b.text)+'</div>' : '';
+      div.innerHTML =
+        bubble +
+        '<img class="sprite" loading="lazy" alt="'+safeName+'" src="'+avatarUrl(c)+'">' +
+        '<div class="char-name">'+safeName+'</div>' +
+        '<div class="char-status">'+(me===c.name?'Eres tú':'en el club')+'</div>';
+      // Click en tu avatar = menú de opciones (nickname, avatar, PIN, reset)
+      // Click en otro avatar = entrar como ese personaje
+      div.onclick = (me===c.name) ? function(){ openAvatarMenu(); } : function(){ claimOrVerify(c.name); };
+      const bubbleEl = div.querySelector('.bubble');
+      if(bubbleEl){
+        bubbleEl.onclick = function(e){ e.stopPropagation(); openAvatarMenu(); };
+      }
+      board.appendChild(div);
+    }catch(e){ console.error('renderBoard: fallo en', c && c.name, e); }
   });
 
   const newDiv = document.createElement('div');
@@ -645,8 +662,7 @@ function renderBoard(){
   board.appendChild(newDiv);
 
   if(me){
-    whoami.innerHTML = 'Estás jugando como <b>'+escapeHtml(me)+'</b>. <a href="#" id="changeAvatarLink" style="color:var(--jade);text-decoration:underline">Cambiar avatar</a>';
-    document.getElementById('changeAvatarLink').onclick = function(e){ e.preventDefault(); claimOrVerify(me); };
+    whoami.innerHTML = 'Estás jugando como <b>'+escapeHtml(me)+'</b>.';
   }
 }
 renderBoard();
@@ -1048,18 +1064,16 @@ syncAvatarsFromNostr(CHARS.map(function(c){ return c.name; }));
 // solas, sin esperar a que llegue un mensaje nuevo u otro evento.
 setInterval(renderBoard, 15000);
 
-/* ---- historial de chat: lista clásica con timestamps, últimos 40 mensajes.
-   Las burbujas son la vista por defecto (vivas, sobre cada personaje); esto
-   es para quien quiere ponerse al día leyendo lo de antes. Se abre tocando
-   cualquier burbuja (la burbuja captura el click, no dispara el claim del
-   personaje). ---- */
-async function openHistory(){
+/* ---- menú de avatar: abre al hacer click en tu personaje.
+   Muestra últimos 50 mensajes del club + opciones de config:
+   cambiar nickname, avatar, PIN, o pedir reset a Jose. ---- */
+async function openAvatarMenu(){
   const overlay = document.getElementById('historyOverlay');
-  const list = document.getElementById('historyList');
+  const list = document.getElementById('clubChatList');
   list.innerHTML = '<div class="msg-empty">Cargando…</div>';
   overlay.classList.add('show');
   try{
-    const events = (await withTimeout(pool.querySync(RELAYS, { kinds:[1], '#t':['olimpo-club-v1'], limit:40 }), 8000))
+    const events = (await withTimeout(pool.querySync(RELAYS, { kinds:[1], '#t':['olimpo-club-v1'], limit:50 }), 8000))
       .filter(function(ev){ return STALE_TEST_MESSAGES.indexOf(ev.content)===-1; });
     events.sort(function(a,b){ return a.created_at-b.created_at; });
     if(!events.length){ list.innerHTML = '<div class="msg-empty">Aún nadie ha dejado mensaje.</div>'; return; }
@@ -1070,11 +1084,36 @@ async function openHistory(){
       return '<div class="msg"><span class="when">'+when+'</span><span class="who">'+escapeHtml(name)+'</span>'+escapeHtml(String(ev.content||'').slice(0,200))+'</div>';
     }).join('');
   }catch(e){
-    list.innerHTML = '<div class="msg-empty">No se pudo cargar el historial.</div>';
+    list.innerHTML = '<div class="msg-empty">No se pudo cargar el chat.</div>';
   }
 }
-document.getElementById('historyClose').onclick = function(){
+
+document.getElementById('menuClose').onclick = function(){
   document.getElementById('historyOverlay').classList.remove('show');
+};
+
+// Cambiar nickname: abre el modal de nickname
+document.getElementById('menuChangeNick').onclick = function(){
+  document.getElementById('historyOverlay').classList.remove('show');
+  openNickModal();
+};
+
+// Cambiar avatar: abre el modal de PIN, pero en modo "cambiar avatar"
+document.getElementById('menuChangeAvatar').onclick = function(){
+  document.getElementById('historyOverlay').classList.remove('show');
+  claimOrVerify(me);
+};
+
+// Cambiar PIN: abre el modal de PIN, pero en modo "cambiar PIN"
+document.getElementById('menuChangePin').onclick = function(){
+  document.getElementById('historyOverlay').classList.remove('show');
+  claimOrVerify(me);
+};
+
+// Pedir reset a Jose: muestra instrucción
+document.getElementById('menuResetRequest').onclick = function(){
+  document.getElementById('historyOverlay').classList.remove('show');
+  alert('Para pedir un reset de tu personaje, escríbele un mensaje privado a Jose desde el Mostrador (abajo a la izquierda). Él puede liberar tu nombre si pierdes acceso.');
 };
 
 /* ---- DM al Mostrador: privado, cifrado extremo a extremo (NIP-04), para
@@ -1102,6 +1141,14 @@ async function getStaffPubkeys(){
   }
   return pubkeys;
 }
+
+document.getElementById('dmInboxToggle').onclick = function(){
+  const list = document.getElementById('dmList');
+  const caret = document.getElementById('dmCaret');
+  const open = list.style.display !== 'none';
+  list.style.display = open ? 'none' : 'block';
+  caret.textContent = open ? '▸' : '▾';
+};
 
 document.getElementById('dmSend').onclick = async function(){
   const input = document.getElementById('dmInput');
@@ -1145,6 +1192,8 @@ async function loadDmInbox(){
     const events = await withTimeout(pool.querySync(RELAYS, { kinds:[4], '#p':[myPubkey], limit:50 }), 8000);
     events.sort(function(a,b){ return b.created_at-a.created_at; });
     const list = document.getElementById('dmList');
+    const countEl = document.getElementById('dmCount');
+    if(countEl) countEl.textContent = events.length ? '('+events.length+')' : '';
     if(!events.length){ list.innerHTML='<div class="msg-empty">Sin mensajes privados todavía.</div>'; inboxBox.style.display='block'; return; }
     list.innerHTML='';
     for(const ev of events){
