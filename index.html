@@ -131,9 +131,9 @@ main.console{max-width:1280px;margin:0 auto;padding:14px;display:flex;flex-direc
 /* ---- burbuja de diálogo sobre el personaje (reemplaza el chat tipo lista) ---- */
 .bubble{
   position:absolute;bottom:100%;left:50%;transform:translateX(-50%);
-  margin-bottom:9px;width:max-content;max-width:150px;
+  margin-bottom:9px;width:max-content;max-width:108px;
   background:var(--jade);border-radius:12px;border-bottom-left-radius:3px;
-  padding:7px 10px;font-family:Arial,sans-serif;font-size:.74rem;font-weight:700;line-height:1.3;
+  padding:6px 8px;font-family:Arial,sans-serif;font-size:.7rem;font-weight:700;line-height:1.25;
   color:#0B0A12 !important;-webkit-text-fill-color:#0B0A12 !important;
   box-shadow:0 6px 18px rgba(0,0,0,.45);
   word-break:break-word;z-index:6;cursor:pointer;
@@ -268,18 +268,14 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
     <div class="panel-title">Tablero · ¿Quién eres?</div>
     <div class="whoami" id="whoami">Toca tu personaje para tomar el control.</div>
     <div class="board" id="board"></div>
+    <div class="msg-form" style="margin-top:14px">
+      <input id="msgInput" type="text" maxlength="80" placeholder="Di algo — aparece sobre tu personaje…">
+      <button class="btn" id="msgSend">Decir</button>
+    </div>
+    <p class="hint">Tu mensaje queda flotando sobre tu personaje un par de minutos. Toca tu personaje arriba antes de escribir.</p>
   </div>
 
   <aside class="club-sidebar">
-
-    <div class="panel" id="mensajes-panel">
-      <div class="panel-title">Di algo al club</div>
-      <div class="msg-form">
-        <input id="msgInput" type="text" maxlength="80" placeholder="Tu mensaje aparece sobre tu personaje…">
-        <button class="btn" id="msgSend">Decir</button>
-      </div>
-      <p class="hint">Tu mensaje queda flotando sobre tu personaje en el tablero hasta que escribas otro. Toca tu personaje arriba antes de escribir.</p>
-    </div>
 
     <div class="panel" id="mostrador-panel">
       <div class="panel-title">El Mostrador</div>
@@ -610,6 +606,7 @@ function escapeHtml(s){
   return String(s).replace(/[&<>"']/g, function(c){ return ESC_MAP[c]; });
 }
 
+const BUBBLE_LIFESPAN_MS = 120000; // 2 minutos visible sobre el personaje, luego solo queda en el historial (click en cualquier burbuja)
 function renderBoard(){
   board.innerHTML='';
   const extraNames = Object.keys(personajesData)
@@ -619,16 +616,21 @@ function renderBoard(){
 
   all.forEach(function(c){
     const b = bubbles[c.name];
+    const bubbleAlive = b && b.text && (Date.now() - (b.ts||0) < BUBBLE_LIFESPAN_MS);
     const safeName = escapeHtml(c.name);
     const div = document.createElement('div');
     div.className = 'char' + (me===c.name ? ' me' : '');
-    const bubble = (b && b.text) ? '<div class="bubble">'+escapeHtml(b.text)+'</div>' : '';
+    const bubble = bubbleAlive ? '<div class="bubble">'+escapeHtml(b.text)+'</div>' : '';
     div.innerHTML =
       bubble +
       '<img class="sprite" loading="lazy" alt="'+safeName+'" src="'+avatarUrl(c)+'">' +
       '<div class="char-name">'+safeName+'</div>' +
       '<div class="char-status">'+(me===c.name?'Eres tú':'en el club')+'</div>';
-    div.onclick = function(){ claimOrVerify(c.name); };
+    // Si ya eres tú, no hace falta volver a poner el PIN — quedas
+    // identificado de forma persistente (localStorage) hasta que cambies de
+    // avatar/nickname o Jose resetee tu personaje. Tocar tu propio tile no
+    // hace nada (ya estás "adentro"); cambiar avatar tiene su propio enlace.
+    div.onclick = (me===c.name) ? null : function(){ claimOrVerify(c.name); };
     const bubbleEl = div.querySelector('.bubble');
     if(bubbleEl){
       bubbleEl.onclick = function(e){ e.stopPropagation(); openHistory(); };
@@ -642,7 +644,10 @@ function renderBoard(){
   newDiv.onclick = function(){ openNickModal(); };
   board.appendChild(newDiv);
 
-  if(me) whoami.innerHTML = 'Estás jugando como <b>'+me+'</b>.';
+  if(me){
+    whoami.innerHTML = 'Estás jugando como <b>'+escapeHtml(me)+'</b>. <a href="#" id="changeAvatarLink" style="color:var(--jade);text-decoration:underline">Cambiar avatar</a>';
+    document.getElementById('changeAvatarLink').onclick = function(e){ e.preventDefault(); claimOrVerify(me); };
+  }
 }
 renderBoard();
 
@@ -1038,6 +1043,10 @@ syncAvatarsFromNostr(CHARS.map(function(c){ return c.name; }));
     renderBoard();
   }catch(e){}
 })();
+
+// re-dibuja cada 15s solo para que las burbujas vencidas (2 min) desaparezcan
+// solas, sin esperar a que llegue un mensaje nuevo u otro evento.
+setInterval(renderBoard, 15000);
 
 /* ---- historial de chat: lista clásica con timestamps, últimos 40 mensajes.
    Las burbujas son la vista por defecto (vivas, sobre cada personaje); esto
