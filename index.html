@@ -73,13 +73,6 @@ header{
   padding:12px 16px;
   display:flex;align-items:center;justify-content:space-between;
 }
-/* retazo del mismo masthead, reusado (un solo archivo, una sola descarga) —
-   franja angosta sobre el tablero, otra ventana de la misma imagen */
-.masthead-strip{
-  height:64px;border-radius:10px;margin-bottom:14px;
-  background: url('avatars/masthead.jpg') center 30% / cover no-repeat;
-  border:1px solid rgba(232,160,32,.35);
-}
 .wordmark{
   font-size:1.15rem;letter-spacing:.02em;font-weight:700;
   color:var(--gold) !important;-webkit-text-fill-color:var(--gold) !important;
@@ -172,6 +165,12 @@ main.console{max-width:1280px;margin:0 auto;padding:14px;display:flex;flex-direc
 .msg .who{font-weight:700;color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important;margin-right:6px}
 .msg .when{font-size:.7rem;color:var(--text3) !important;-webkit-text-fill-color:var(--text3) !important;float:right}
 .msg-empty{color:var(--text3) !important;-webkit-text-fill-color:var(--text3) !important;font-size:.85rem;text-align:center;padding:14px}
+.dm-reply-row{display:flex;gap:6px;margin-top:8px;clear:both}
+.dm-reply-row input{
+  flex:1;min-height:36px;background:var(--bg2);border:1px solid var(--jade);border-radius:6px;
+  padding:0 8px;font-family:Arial,sans-serif;font-size:.82rem;color:var(--text) !important;-webkit-text-fill-color:var(--text) !important;
+}
+.dm-reply-row button{min-height:36px;padding:0 12px}
 
 .msg-form{display:flex;gap:8px}
 .msg-form input{
@@ -273,7 +272,6 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
 <main class="console">
 
   <div class="panel club-main" id="tablero-panel">
-    <div class="masthead-strip"></div>
     <div class="panel-title">Tablero · ¿Quién eres?</div>
     <div class="whoami" id="whoami">Toca tu personaje para tomar el control.</div>
     <div class="board" id="board"></div>
@@ -298,7 +296,7 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
         <input id="dmInput" type="text" maxlength="300" placeholder="Escríbele en privado al Mostrador…">
         <button class="btn" id="dmSend">Enviar</button>
       </div>
-      <p class="hint">Privado, cifrado de extremo a extremo — solo lo leen Jose y el staff que él designe. Toca tu personaje arriba antes de escribir.</p>
+      <p class="hint">Privado, cifrado de extremo a extremo — solo lo lees vos y el staff que responde. Toca tu personaje arriba antes de escribir.</p>
       <div id="dmInbox" style="display:none;margin-top:14px">
         <div class="panel-title" style="margin-bottom:8px">Bandeja del Mostrador</div>
         <div class="msglist" id="dmList"></div>
@@ -315,6 +313,7 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
       <p class="trust-text">Olimpo 2.0 es un espacio para actividades culturales y educativas alrededor de plantas maestras: café, charlas, cine, arte y comunidad.</p>
       <p class="trust-text">Tu PIN nunca se guarda como texto — deriva una llave criptográfica que solo vive en tu navegador. Ni Jose ni nadie del club puede ver ni recuperar tu PIN. Jose solo puede <b>liberar</b> un personaje si pierdes acceso.</p>
       <p class="trust-text">No pedimos ni guardamos tu nombre real. Elige cualquier nickname tocando "+ Nuevo" en el tablero — eso es lo único que queda registrado.</p>
+      <p class="trust-text"><b>Stack:</b> identidad real en <b>Nostr</b> (llaves secp256k1, las mismas de Bitcoin) · chat <b>P2P directo</b> vía WebRTC (Trystero) sin servidor central · mensajes privados <b>cifrados de extremo a extremo</b> (NIP-04) · ningún historial completo vive en un solo lugar — fragmentado entre relés públicos y tu propio dispositivo.</p>
     </div>
 
   </aside>
@@ -885,10 +884,9 @@ onSnapshot(collection(db,'olimpo_personajes'), function(snap){
   snap.forEach(function(d){ data[d.id] = d.data(); });
   personajesData = data;
   // El contador cuenta actividad REAL — solo quienes se vieron (crearon o
-  // verificaron su PIN) en las últimas 24h, no el total histórico de
-  // nombres alguna vez reclamados. Se recalcula solo (onSnapshot es en
-  // vivo), así que de hecho se refresca mucho más seguido que cada 3h.
-  const cutoff = Date.now() - 24*60*60*1000;
+  // verificaron su PIN) en las últimas 2h, no el total histórico de
+  // nombres alguna vez reclamados. Se recalcula solo (onSnapshot es en vivo).
+  const cutoff = Date.now() - 2*60*60*1000;
   let active = 0;
   Object.keys(data).forEach(function(n){
     const ls = data[n].lastSeen;
@@ -1079,33 +1077,53 @@ document.getElementById('dmSend').onclick = async function(){
   }
 };
 
-/* ---- bandeja del Mostrador: solo se arma si TÚ eres staff — descifra los
-   DMs dirigidos a tu propia llave. Nadie más puede leerlos, ni siquiera
-   los relés que los transportan (solo ven el texto cifrado). ---- */
+/* ---- bandeja del Mostrador: para CUALQUIERA que esté logueado — descifra
+   los DMs dirigidos a tu propia llave. Si eres staff, ves los mensajes que
+   te escribieron; si eres quien escribió, ves la respuesta del Mostrador
+   ahí mismo. Cada mensaje tiene su propio "Responder", que cifra y envía
+   directo a quien lo mandó (su pubkey ya viene en el evento, ev.pubkey) —
+   así la conversación queda privada entre esas dos llaves, P2P, nadie más
+   (ni los relés que solo ven texto cifrado) puede leerla. ---- */
 async function loadDmInbox(){
   const inboxBox = document.getElementById('dmInbox');
   if(!me){ inboxBox.style.display='none'; return; }
-  const mirrorRole = personajesData[me] && personajesData[me].role;
-  const isStaff = !!STAFF_SEEDS[me] || (mirrorRole && mirrorRole!=='member');
-  if(!isStaff){ inboxBox.style.display='none'; return; }
   const pinArr = JSON.parse(localStorage.getItem('olimpo_pin')||'null');
-  if(!pinArr) return;
+  if(!pinArr){ inboxBox.style.display='none'; return; }
   try{
     const mySecretKey = await deriveSecretKey(me, pinArr);
     const myPubkey = getPublicKey(mySecretKey);
     const events = await withTimeout(pool.querySync(RELAYS, { kinds:[4], '#p':[myPubkey], limit:50 }), 8000);
     events.sort(function(a,b){ return b.created_at-a.created_at; });
     const list = document.getElementById('dmList');
-    if(!events.length){ list.innerHTML='<div class="msg-empty">Sin mensajes privados todavía.</div>'; }
-    else{
-      const items = await Promise.all(events.map(async function(ev){
-        try{
-          const plain = await nip04.decrypt(mySecretKey, ev.pubkey, ev.content);
-          const when = new Date(ev.created_at*1000).toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit'});
-          return '<div class="msg"><span class="when">'+when+'</span>'+escapeHtml(plain)+'</div>';
-        }catch(e){ return ''; }
-      }));
-      list.innerHTML = items.join('') || '<div class="msg-empty">Sin mensajes privados todavía.</div>';
+    if(!events.length){ list.innerHTML='<div class="msg-empty">Sin mensajes privados todavía.</div>'; inboxBox.style.display='block'; return; }
+    list.innerHTML='';
+    for(const ev of events){
+      try{
+        const plain = await nip04.decrypt(mySecretKey, ev.pubkey, ev.content);
+        const when = new Date(ev.created_at*1000).toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit'});
+        const row = document.createElement('div');
+        row.className = 'msg';
+        row.innerHTML = '<span class="when">'+when+'</span>'+escapeHtml(plain)+
+          '<div class="dm-reply-row"><input type="text" maxlength="300" placeholder="Responder…"><button class="btn">↩</button></div>';
+        const input = row.querySelector('input');
+        const btn = row.querySelector('button');
+        async function sendReply(){
+          const txt = input.value.trim();
+          if(!txt) return;
+          input.disabled = true; btn.disabled = true;
+          try{
+            const cipher = await nip04.encrypt(mySecretKey, ev.pubkey, '['+me+'] '+txt);
+            const tmpl = { kind:4, created_at: Math.floor(Date.now()/1000), tags:[['p', ev.pubkey]], content: cipher };
+            const signed = finalizeEvent(tmpl, mySecretKey);
+            await Promise.any(pool.publish(RELAYS, signed));
+            input.value=''; input.placeholder='Enviado ✓';
+          }catch(e){ input.placeholder='Error, intenta de nuevo'; }
+          input.disabled = false; btn.disabled = false;
+        }
+        btn.onclick = sendReply;
+        input.addEventListener('keydown', function(e){ if(e.key==='Enter') sendReply(); });
+        list.appendChild(row);
+      }catch(e){}
     }
     inboxBox.style.display='block';
   }catch(e){}
