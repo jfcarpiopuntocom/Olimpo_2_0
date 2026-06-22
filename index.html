@@ -375,10 +375,14 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
 <div class="pin-overlay" id="historyOverlay">
   <div class="pin-box" style="max-width:440px">
     <h3>Chat del club</h3>
-    <p>Últimos 40 mensajes, con hora — para quien quiera leer lo de antes.</p>
-    <div class="msglist" id="historyList" style="max-height:50vh"><div class="msg-empty">Cargando…</div></div>
-    <div class="pin-actions">
-      <button class="btn" id="historyClose" style="flex:1">Cerrar</button>
+    <p>Últimos 50 mensajes del club.</p>
+    <div class="msglist" id="clubChatList" style="max-height:50vh"><div class="msg-empty">Cargando…</div></div>
+    <div class="pin-actions" style="flex-direction:column;gap:8px">
+      <button class="btn" id="menuChangeNick">Cambiar nickname</button>
+      <button class="btn" id="menuChangeAvatar">Cambiar avatar</button>
+      <button class="btn" id="menuChangePin">Cambiar PIN</button>
+      <button class="btn" id="menuResetRequest">Pedir reset a Jose</button>
+      <button class="btn pin-cancel" id="menuClose" style="flex:1">Cerrar</button>
     </div>
   </div>
 </div>
@@ -626,14 +630,12 @@ function renderBoard(){
       '<img class="sprite" loading="lazy" alt="'+safeName+'" src="'+avatarUrl(c)+'">' +
       '<div class="char-name">'+safeName+'</div>' +
       '<div class="char-status">'+(me===c.name?'Eres tú':'en el club')+'</div>';
-    // Si ya eres tú, no hace falta volver a poner el PIN — quedas
-    // identificado de forma persistente (localStorage) hasta que cambies de
-    // avatar/nickname o Jose resetee tu personaje. Tocar tu propio tile no
-    // hace nada (ya estás "adentro"); cambiar avatar tiene su propio enlace.
-    div.onclick = (me===c.name) ? null : function(){ claimOrVerify(c.name); };
+    // Click en tu avatar = menú de opciones (nickname, avatar, PIN, reset)
+    // Click en otro avatar = entrar como ese personaje
+    div.onclick = (me===c.name) ? function(){ openAvatarMenu(); } : function(){ claimOrVerify(c.name); };
     const bubbleEl = div.querySelector('.bubble');
     if(bubbleEl){
-      bubbleEl.onclick = function(e){ e.stopPropagation(); openHistory(); };
+      bubbleEl.onclick = function(e){ e.stopPropagation(); openAvatarMenu(); };
     }
     board.appendChild(div);
   });
@@ -645,8 +647,7 @@ function renderBoard(){
   board.appendChild(newDiv);
 
   if(me){
-    whoami.innerHTML = 'Estás jugando como <b>'+escapeHtml(me)+'</b>. <a href="#" id="changeAvatarLink" style="color:var(--jade);text-decoration:underline">Cambiar avatar</a>';
-    document.getElementById('changeAvatarLink').onclick = function(e){ e.preventDefault(); claimOrVerify(me); };
+    whoami.innerHTML = 'Estás jugando como <b>'+escapeHtml(me)+'</b>.';
   }
 }
 renderBoard();
@@ -1048,18 +1049,16 @@ syncAvatarsFromNostr(CHARS.map(function(c){ return c.name; }));
 // solas, sin esperar a que llegue un mensaje nuevo u otro evento.
 setInterval(renderBoard, 15000);
 
-/* ---- historial de chat: lista clásica con timestamps, últimos 40 mensajes.
-   Las burbujas son la vista por defecto (vivas, sobre cada personaje); esto
-   es para quien quiere ponerse al día leyendo lo de antes. Se abre tocando
-   cualquier burbuja (la burbuja captura el click, no dispara el claim del
-   personaje). ---- */
-async function openHistory(){
+/* ---- menú de avatar: abre al hacer click en tu personaje.
+   Muestra últimos 50 mensajes del club + opciones de config:
+   cambiar nickname, avatar, PIN, o pedir reset a Jose. ---- */
+async function openAvatarMenu(){
   const overlay = document.getElementById('historyOverlay');
-  const list = document.getElementById('historyList');
+  const list = document.getElementById('clubChatList');
   list.innerHTML = '<div class="msg-empty">Cargando…</div>';
   overlay.classList.add('show');
   try{
-    const events = (await withTimeout(pool.querySync(RELAYS, { kinds:[1], '#t':['olimpo-club-v1'], limit:40 }), 8000))
+    const events = (await withTimeout(pool.querySync(RELAYS, { kinds:[1], '#t':['olimpo-club-v1'], limit:50 }), 8000))
       .filter(function(ev){ return STALE_TEST_MESSAGES.indexOf(ev.content)===-1; });
     events.sort(function(a,b){ return a.created_at-b.created_at; });
     if(!events.length){ list.innerHTML = '<div class="msg-empty">Aún nadie ha dejado mensaje.</div>'; return; }
@@ -1070,11 +1069,36 @@ async function openHistory(){
       return '<div class="msg"><span class="when">'+when+'</span><span class="who">'+escapeHtml(name)+'</span>'+escapeHtml(String(ev.content||'').slice(0,200))+'</div>';
     }).join('');
   }catch(e){
-    list.innerHTML = '<div class="msg-empty">No se pudo cargar el historial.</div>';
+    list.innerHTML = '<div class="msg-empty">No se pudo cargar el chat.</div>';
   }
 }
-document.getElementById('historyClose').onclick = function(){
+
+document.getElementById('menuClose').onclick = function(){
   document.getElementById('historyOverlay').classList.remove('show');
+};
+
+// Cambiar nickname: abre el modal de nickname
+document.getElementById('menuChangeNick').onclick = function(){
+  document.getElementById('historyOverlay').classList.remove('show');
+  openNickModal();
+};
+
+// Cambiar avatar: abre el modal de PIN, pero en modo "cambiar avatar"
+document.getElementById('menuChangeAvatar').onclick = function(){
+  document.getElementById('historyOverlay').classList.remove('show');
+  claimOrVerify(me);
+};
+
+// Cambiar PIN: abre el modal de PIN, pero en modo "cambiar PIN"
+document.getElementById('menuChangePin').onclick = function(){
+  document.getElementById('historyOverlay').classList.remove('show');
+  claimOrVerify(me);
+};
+
+// Pedir reset a Jose: muestra instrucción
+document.getElementById('menuResetRequest').onclick = function(){
+  document.getElementById('historyOverlay').classList.remove('show');
+  alert('Para pedir un reset de tu personaje, escríbele un mensaje privado a Jose desde el Mostrador (abajo a la izquierda). Él puede liberar tu nombre si pierdes acceso.');
 };
 
 /* ---- DM al Mostrador: privado, cifrado extremo a extremo (NIP-04), para
