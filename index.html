@@ -152,7 +152,8 @@ main.console{max-width:1280px;margin:0 auto;padding:14px;display:flex;flex-direc
 }
 @keyframes bubbleIn{from{opacity:0;transform:translateX(-50%) translateY(4px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
 
-.whoami{font-family:Arial,sans-serif;font-size:.9rem;color:var(--text2) !important;-webkit-text-fill-color:var(--text2) !important;margin-bottom:12px}
+.tablero-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.whoami{font-family:Arial,sans-serif;font-size:.9rem;color:var(--text2) !important;-webkit-text-fill-color:var(--text2) !important}
 .whoami b{color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important}
 
 /* ---- anuncios ---- */
@@ -272,8 +273,10 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
 <main class="console">
 
   <div class="panel club-main" id="tablero-panel">
-    <div class="panel-title">Tablero · ¿Quién eres?</div>
-    <div class="whoami" id="whoami">Toca tu personaje para tomar el control.</div>
+    <div class="tablero-head">
+      <div class="panel-title" style="margin-bottom:0">Tablero · ¿Quién eres?</div>
+      <div class="whoami" id="whoami">Toca tu personaje para tomar el control.</div>
+    </div>
     <div class="board" id="board"></div>
     <div class="msg-form" style="margin-top:14px">
       <input id="msgInput" type="text" maxlength="80" placeholder="Di algo — aparece sobre tu personaje…">
