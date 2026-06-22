@@ -61,20 +61,24 @@ body{
   padding-bottom:64px;
 }
 
-/* scanlines, console feel */
-.scanlines{
-  position:fixed;inset:0;z-index:90;pointer-events:none;
-  background:repeating-linear-gradient(0deg, rgba(0,0,0,0.12) 0px, rgba(0,0,0,0.12) 1px, transparent 1px, transparent 3px);
-  opacity:.35;
-}
 
 /* ---- topbar ---- */
 header{
   position:sticky;top:0;z-index:50;
-  background:var(--bg2);
+  background:
+    linear-gradient(90deg, var(--bg2) 0%, rgba(21,18,31,.6) 50%, rgba(21,18,31,.2) 100%),
+    url('avatars/masthead.jpg') right -20px center / auto 220px no-repeat,
+    var(--bg2);
   border-bottom:2px solid var(--gold);
   padding:12px 16px;
   display:flex;align-items:center;justify-content:space-between;
+}
+/* retazo del mismo masthead, reusado (un solo archivo, una sola descarga) —
+   franja angosta sobre el tablero, otra ventana de la misma imagen */
+.masthead-strip{
+  height:64px;border-radius:10px;margin-bottom:14px;
+  background: url('avatars/masthead.jpg') center 30% / cover no-repeat;
+  border:1px solid rgba(232,160,32,.35);
 }
 .wordmark{
   font-size:1.15rem;letter-spacing:.02em;font-weight:700;
@@ -236,6 +240,13 @@ main.console{max-width:1280px;margin:0 auto;padding:14px;display:flex;flex-direc
 }
 .pin-mode.active{background:rgba(40,236,170,.18);box-shadow:0 0 0 2px var(--jade) inset}
 .pin-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:16px}
+.avatar-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:16px}
+.avatar-pick{
+  background:var(--bg3);border:2px solid rgba(232,160,32,.3);border-radius:8px;
+  padding:4px;cursor:pointer;min-height:44px;display:flex;align-items:center;justify-content:center;
+}
+.avatar-pick img{width:100%;height:48px;object-fit:cover;object-position:center 18%;border-radius:6px}
+.avatar-pick.active{border-color:var(--jade);box-shadow:0 0 0 2px rgba(40,236,170,.3)}
 .pin-emoji{
   min-height:40px;font-size:1.25rem;background:var(--bg3);border:1px solid rgba(232,160,32,.3);
   border-radius:8px;cursor:pointer;
@@ -249,7 +260,6 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
 </style>
 </head>
 <body>
-<div class="scanlines"></div>
 
 <header>
   <div class="wordmark">OLIMPO <span>2.0</span></div>
@@ -263,6 +273,7 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
 <main class="console">
 
   <div class="panel club-main" id="tablero-panel">
+    <div class="masthead-strip"></div>
     <div class="panel-title">Tablero · ¿Quién eres?</div>
     <div class="whoami" id="whoami">Toca tu personaje para tomar el control.</div>
     <div class="board" id="board"></div>
@@ -347,6 +358,10 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
       <div class="pin-slot" id="pinSlot2"></div>
     </div>
     <div class="pin-grid" id="pinGrid"></div>
+    <div id="avatarPickWrap" style="display:none">
+      <p class="hint" style="margin:4px 0 8px">Elige tu avatar cyborg:</p>
+      <div class="avatar-grid" id="avatarGrid"></div>
+    </div>
     <div class="pin-actions">
       <button class="btn pin-cancel" id="pinCancel">Cancelar</button>
       <button class="btn" id="pinConfirm" style="flex:1">Confirmar</button>
@@ -415,7 +430,7 @@ try {
    ============================================================ */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import {
-  initializeFirestore, doc, setDoc, collection, onSnapshot
+  initializeFirestore, doc, setDoc, collection, onSnapshot, query, where, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 import { getPublicKey, finalizeEvent, SimplePool, nip04 } from "https://esm.sh/nostr-tools@2";
@@ -554,7 +569,9 @@ function seedNum(name){
   return h;
 }
 function avatarUrl(c){
-  const f = FOUNDER_AVATAR[c.name] || HUMAN_AVATARS[seedNum(c.name) % HUMAN_AVATARS.length];
+  const chosen = personajesData[c.name] && personajesData[c.name].avatar;
+  const f = (chosen && HUMAN_AVATARS.indexOf(chosen)!==-1) ? chosen
+    : FOUNDER_AVATAR[c.name] || HUMAN_AVATARS[seedNum(c.name) % HUMAN_AVATARS.length];
   return 'avatars/' + f + '.png';
 }
 
@@ -668,6 +685,38 @@ document.querySelectorAll('.pin-mode').forEach(function(b){
   };
 });
 
+/* ---- selector de avatar: aparece SIEMPRE que se confirma el PIN —
+   crear, activar staff, o simplemente volver a entrar. Cambiar de avatar
+   no tiene paso aparte: cada vez que demuestras tu código (PIN), puedes
+   tocar un avatar distinto y queda guardado. Si no tocas nada, se mantiene
+   el que ya tenías. ---- */
+let selectedAvatar = null;
+const avatarPickWrap = document.getElementById('avatarPickWrap');
+const avatarGrid = document.getElementById('avatarGrid');
+function showAvatarPicker(name){
+  const current = personajesData[name] && personajesData[name].avatar;
+  const n = seedNum(name);
+  selectedAvatar = (current && HUMAN_AVATARS.indexOf(current)!==-1) ? current
+    : FOUNDER_AVATAR[name] || HUMAN_AVATARS[n % HUMAN_AVATARS.length];
+  avatarGrid.innerHTML='';
+  HUMAN_AVATARS.forEach(function(av){
+    const d = document.createElement('div');
+    d.className = 'avatar-pick' + (av===selectedAvatar ? ' active' : '');
+    d.innerHTML = '<img src="avatars/'+av+'.png" alt="'+av+'">';
+    d.onclick = function(){
+      selectedAvatar = av;
+      avatarGrid.querySelectorAll('.avatar-pick').forEach(function(x){ x.classList.remove('active'); });
+      d.classList.add('active');
+    };
+    avatarGrid.appendChild(d);
+  });
+  avatarPickWrap.style.display = 'block';
+}
+function hideAvatarPicker(){
+  avatarPickWrap.style.display = 'none';
+  selectedAvatar = null;
+}
+
 function resetModal(){
   picked = [];
   pinSlots.forEach(function(s){ s.textContent=''; });
@@ -676,6 +725,7 @@ function resetModal(){
   document.querySelectorAll('.pin-mode').forEach(function(x){ x.classList.remove('active'); });
   document.querySelector('.pin-mode[data-mode="emoji"]').classList.add('active');
   buildGrid(pinMode);
+  hideAvatarPicker();
 }
 function closeModal(){ overlay.classList.remove('show'); resetModal(); }
 document.getElementById('pinCancel').onclick = closeModal;
@@ -709,7 +759,8 @@ async function claimOrVerify(name){
       pendingMode = 'verify';
       pendingClaimPubkey = claim.pubkey;
       pinTitle.textContent = 'Ingresa tu PIN';
-      pinSub.textContent = name + ' ya tiene PIN. Ingresa tus 3 emojis en orden — si no te los sabes, prueba con "3 dígitos".';
+      pinSub.textContent = name + ' ya tiene PIN. Ingresa tus 3 emojis en orden — si no te los sabes, prueba con "3 dígitos". De paso puedes cambiar tu avatar.';
+      showAvatarPicker(name);
     } else if(STAFF_SEEDS[name]){
       // Personajes de staff: para activarlos por primera vez hace falta el
       // código de activación (dado por el equipo), no cualquier PIN libre
@@ -722,6 +773,7 @@ async function claimOrVerify(name){
       pendingMode = 'create';
       pinTitle.textContent = 'Crea tu PIN';
       pinSub.textContent = 'Eres el primero en jugar como ' + name + '. Elige 3 emojis, en orden — es tu llave. ¿Prefieres números? Toca "3 dígitos".';
+      showAvatarPicker(name);
     }
   }catch(e){
     pinTitle.textContent = 'Sin conexión';
@@ -742,17 +794,23 @@ document.getElementById('pinConfirm').onclick = async function(){
       return;
     }
     pendingStaffRole = staff.role;
+    pendingMode = 'create';
     if(staff.forceChange){
-      pendingMode = 'create';
       clearPicked();
       pinError.textContent='';
       pinTitle.textContent = 'Elige tu PIN definitivo';
       pinSub.textContent = 'Activado. Ahora elige los 3 símbolos que serán tu llave — el código de activación ya no sirve.';
+      showAvatarPicker(pendingName);
       return;
     }
-    // forceChange=false: el código de activación ya es el PIN real — seguimos
-    // directo a crear el claim con estos mismos símbolos, sin pedir otro.
-    pendingMode = 'create';
+    // forceChange=false: el código de activación ya es el PIN real. Hace
+    // falta un segundo toque en Confirmar para elegir avatar antes de crear
+    // el claim (los símbolos ya elegidos se mantienen, no hay que repetirlos).
+    pinError.textContent='';
+    pinTitle.textContent = 'Elige tu avatar';
+    pinSub.textContent = 'Código aceptado. Elige tu avatar cyborg y confirma.';
+    showAvatarPicker(pendingName);
+    return;
   }
 
   try{
@@ -763,16 +821,17 @@ document.getElementById('pinConfirm').onclick = async function(){
 
     if(pendingMode==='create'){
       const role = pendingStaffRole || 'member';
+      const avatar = selectedAvatar || HUMAN_AVATARS[seedNum(pendingName) % HUMAN_AVATARS.length];
       const tmpl = {
         kind: 30078, created_at: Math.floor(Date.now()/1000),
-        tags: [['d',claimTag(pendingName)]], content: JSON.stringify({ role: role })
+        tags: [['d',claimTag(pendingName)]], content: JSON.stringify({ role: role, avatar: avatar })
       };
       const signed = finalizeEvent(tmpl, secretKey);
       await withTimeout(Promise.any(pool.publish(RELAYS, signed)), 9000); // basta con que UN relé lo acepte
       // espejo de cortesía en Firebase — best-effort, nunca bloquea ni decide nada;
       // solo sirve para que el tablero pueda listar nicknames sin tener que
       // adivinarlos buscando en relés. Si falla, no pasa nada.
-      setDoc(doc(db,'olimpo_personajes',pendingName), { pubkey: myPubkey, role: role }).catch(function(){});
+      setDoc(doc(db,'olimpo_personajes',pendingName), { pubkey: myPubkey, role: role, avatar: avatar, lastSeen: serverTimestamp() }).catch(function(){});
 
       var codigo = picked.join('-');
       var wasStaffSetup = !!pendingStaffRole;
@@ -789,6 +848,23 @@ document.getElementById('pinConfirm').onclick = async function(){
         pinError.textContent = 'PIN incorrecto. Ese personaje ya es alguien más.';
         clearPicked();
         return;
+      }
+      // Verificado: ya demostraste tu PIN — marca presencia real (para el
+      // contador "en el club", que solo cuenta actividad de hoy) y, de paso,
+      // guarda el avatar si lo cambiaste (republicar el mismo claim, misma
+      // pubkey, solo cambia el contenido — no hace falta rotación para esto).
+      const currentAvatar = personajesData[pendingName] && personajesData[pendingName].avatar;
+      const role = (STAFF_SEEDS[pendingName] && STAFF_SEEDS[pendingName].role) || (personajesData[pendingName] && personajesData[pendingName].role) || 'member';
+      if(selectedAvatar && selectedAvatar !== currentAvatar){
+        const tmpl2 = {
+          kind: 30078, created_at: Math.floor(Date.now()/1000),
+          tags: [['d',claimTag(pendingName)]], content: JSON.stringify({ role: role, avatar: selectedAvatar })
+        };
+        const signed2 = finalizeEvent(tmpl2, secretKey);
+        pool.publish(RELAYS, signed2);
+        setDoc(doc(db,'olimpo_personajes',pendingName), { pubkey: myPubkey, role: role, avatar: selectedAvatar, lastSeen: serverTimestamp() }).catch(function(){});
+      } else {
+        setDoc(doc(db,'olimpo_personajes',pendingName), { pubkey: myPubkey, role: role, lastSeen: serverTimestamp() }).catch(function(){});
       }
     }
     me = pendingName;
@@ -808,7 +884,18 @@ onSnapshot(collection(db,'olimpo_personajes'), function(snap){
   const data = {};
   snap.forEach(function(d){ data[d.id] = d.data(); });
   personajesData = data;
-  onlineCountEl.textContent = String(snap.size); // el sufijo " en el club" ya está en el HTML del pill
+  // El contador cuenta actividad REAL — solo quienes se vieron (crearon o
+  // verificaron su PIN) en las últimas 24h, no el total histórico de
+  // nombres alguna vez reclamados. Se recalcula solo (onSnapshot es en
+  // vivo), así que de hecho se refresca mucho más seguido que cada 3h.
+  const cutoff = Date.now() - 24*60*60*1000;
+  let active = 0;
+  Object.keys(data).forEach(function(n){
+    const ls = data[n].lastSeen;
+    const ms = ls && ls.toMillis ? ls.toMillis() : 0;
+    if(ms >= cutoff) active++;
+  });
+  onlineCountEl.textContent = String(active); // el sufijo " en el club" ya está en el HTML del pill
   renderBoard();
   loadDmInbox();
 });
