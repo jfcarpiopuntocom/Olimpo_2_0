@@ -91,7 +91,7 @@ header{
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
 /* ---- boot / intro ---- */
-.boot{padding:12px 18px 6px;max-width:720px;margin:0 auto;text-align:center}
+.boot{padding:8px 18px 2px;max-width:720px;margin:0 auto;text-align:center}
 .boot p{font-size:.8rem;color:var(--text2) !important;-webkit-text-fill-color:var(--text2) !important;line-height:1.4}
 .cursor{display:inline-block;width:9px;height:1.1em;background:var(--jade);vertical-align:text-bottom;animation:blink 1s steps(1) infinite}
 @keyframes blink{50%{opacity:0}}
@@ -118,7 +118,7 @@ main.console{max-width:1280px;margin:0 auto;padding:14px;display:flex;flex-direc
 /* ---- board / characters ---- */
 .board{
   display:grid;grid-template-columns:repeat(3,1fr);gap:10px;
-  padding-top:34px; /* deja aire arriba para que las burbujas de la fila 1 no se corten */
+  padding-top:22px; /* deja aire arriba para que las burbujas de la fila 1 no se corten */
 }
 @media(min-width:480px){.board{grid-template-columns:repeat(4,1fr)}}
 .char{
@@ -160,7 +160,7 @@ main.console{max-width:1280px;margin:0 auto;padding:14px;display:flex;flex-direc
 }
 @keyframes bubbleIn{from{opacity:0;transform:translateX(-50%) translateY(4px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
 
-.tablero-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.tablero-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px}
 .whoami{font-family:Arial,sans-serif;font-size:.9rem;color:var(--text2) !important;-webkit-text-fill-color:var(--text2) !important}
 .whoami b{color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important}
 
@@ -380,13 +380,26 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
 <div class="pin-overlay" id="nickOverlay">
   <div class="pin-box">
     <h3>Crea tu personaje</h3>
-    <p>Elige un nickname. No pedimos tu nombre real — esto es lo único que queda guardado.</p>
+    <p>Elige un apodo. No pedimos tu nombre real — esto es lo único que queda guardado.</p>
     <div class="pin-error" id="nickError"></div>
-    <input id="nickInput" type="text" maxlength="20" placeholder="Tu nickname"
+    <input id="nickInput" type="text" maxlength="20" placeholder="Tu apodo"
       style="width:100%;min-height:44px;background:var(--bg3);border:1px solid var(--gold);border-radius:8px;padding:0 12px;font-family:Arial,sans-serif;font-size:1rem;color:var(--text);margin-bottom:16px">
     <div class="pin-actions">
       <button class="btn pin-cancel" id="nickCancel">Cancelar</button>
       <button class="btn" id="nickConfirm" style="flex:1">Siguiente</button>
+    </div>
+  </div>
+</div>
+
+<div class="pin-overlay" id="codeOverlay">
+  <div class="pin-box" style="max-width:380px;text-align:center">
+    <h3 id="codeTitle">¡Listo!</h3>
+    <p id="codeMsg" style="margin-bottom:8px"></p>
+    <div id="codeBox" style="font-family:monospace;font-size:1.4rem;font-weight:700;color:var(--gold) !important;-webkit-text-fill-color:var(--gold) !important;background:var(--bg3);border:1px solid var(--gold);border-radius:8px;padding:14px;margin-bottom:14px;letter-spacing:.15em"></div>
+    <p class="hint" style="margin-bottom:14px">Anótalo. Sirve igual que tus emojis para volver a entrar.</p>
+    <div class="pin-actions">
+      <button class="btn pin-cancel" id="codeCopy" style="flex:1">Copiar</button>
+      <button class="btn" id="codeDone" style="flex:1">Listo</button>
     </div>
   </div>
 </div>
@@ -397,7 +410,7 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
     <p>Últimos 50 mensajes del club.</p>
     <div class="msglist" id="clubChatList" style="max-height:50vh"><div class="msg-empty">Cargando…</div></div>
     <div class="pin-actions" style="flex-direction:column;gap:8px">
-      <button class="btn" id="menuChangeNick">Cambiar nickname</button>
+      <button class="btn" id="menuChangeNick">Cambiar apodo</button>
       <button class="btn" id="menuChangeAvatar">Cambiar avatar</button>
       <button class="btn" id="menuChangePin">Cambiar PIN</button>
       <button class="btn" id="menuResetRequest">Pedir reset a Jose</button>
@@ -676,7 +689,7 @@ function renderBoard(){
 
   const newDiv = document.createElement('div');
   newDiv.className = 'char char-new';
-  newDiv.innerHTML = '<div class="sprite">+</div><div class="char-name">Nuevo</div><div class="char-status">crea tu nickname</div>';
+  newDiv.innerHTML = '<div class="sprite">+</div><div class="char-name">Nuevo</div><div class="char-status">crea tu apodo</div>';
   newDiv.onclick = function(){ openNickModal(); };
   board.appendChild(newDiv);
 
@@ -701,7 +714,7 @@ document.getElementById('nickCancel').onclick = closeNickModal;
 document.getElementById('nickConfirm').onclick = function(){
   const nick = nickInput.value.trim();
   if(nick.length<2 || nick.length>20){ nickError.textContent='Entre 2 y 20 caracteres.'; return; }
-  if(nick.indexOf('/')!==-1){ nickError.textContent='Sin "/" en el nickname.'; return; }
+  if(nick.indexOf('/')!==-1){ nickError.textContent='Sin "/" en el apodo.'; return; }
   if(CHARS.some(function(c){ return c.name.toLowerCase()===nick.toLowerCase() && c.name!==nick; })){
     nickError.textContent='Ese nombre ya es de un personaje del tablero — tócalo arriba en vez de crear uno nuevo.';
     return;
@@ -800,6 +813,92 @@ function resetModal(){
 }
 function closeModal(){ overlay.classList.remove('show'); resetModal(); }
 document.getElementById('pinCancel').onclick = closeModal;
+
+/* ---- modal de código de respaldo (al crear/cambiar apodo): muestra el
+   código combinado de los 3 símbolos en grande, copiable, en lugar del
+   alert() viejo que JFC encontraba poco visible. ---- */
+function showBackupCode(name, codigo, wasStaffSetup){
+  const ov = document.getElementById('codeOverlay');
+  document.getElementById('codeTitle').textContent = wasStaffSetup ? ('Panel de ' + name + ' activado') : ('¡Listo, ' + name + '!');
+  document.getElementById('codeMsg').textContent = 'Tu código de respaldo:';
+  document.getElementById('codeBox').textContent = codigo;
+  ov.classList.add('show');
+}
+document.getElementById('codeDone').onclick = function(){ document.getElementById('codeOverlay').classList.remove('show'); };
+document.getElementById('codeCopy').onclick = function(){
+  const txt = document.getElementById('codeBox').textContent;
+  navigator.clipboard?.writeText(txt).then(function(){
+    const b = document.getElementById('codeCopy');
+    const old = b.textContent; b.textContent = '✓ Copiado'; setTimeout(function(){ b.textContent = old; }, 1500);
+  });
+};
+
+/* ---- cierre universal de modales: click en el fondo oscuro O tecla ESC.
+   Cada .pin-overlay se cierra sin acción extra (solo retira la clase show).
+   Esto NO incluye el código-overlay para el caso del backup code (se
+   cierra solo con "Listo" para forzar que JFC lo lea), ni el pin-overlay
+   en medio de un flujo de creación (se cierra con Cancelar). Aplica en:
+   nickOverlay, historyOverlay (menú avatar). ---- */
+document.querySelectorAll('.pin-overlay').forEach(function(ov){
+  ov.addEventListener('click', function(e){
+    if(e.target === ov) ov.classList.remove('show');
+  });
+});
+document.addEventListener('keydown', function(e){
+  if(e.key === 'Escape'){
+    document.querySelectorAll('.pin-overlay.show').forEach(function(ov){ ov.classList.remove('show'); });
+  }
+});
+
+/* ---- sonidos rotativos al apretar "Decir" — Web Audio sintetizado en
+   vivo, sin archivos. 8 patrones futuristas distintos que rotan secuencial
+   + ligera variación de pitch aleatoria, así nunca suena igual dos veces
+   seguidas. Lazy-init en primer click (autoplay policy). ---- */
+let __audioCtx = null;
+let __sfxIdx = 0;
+function getAudio(){
+  if(!__audioCtx){
+    try{ __audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){ __audioCtx = null; }
+  }
+  return __audioCtx;
+}
+const SFX_PATTERNS = [
+  // Cada pattern: [waveType, freqStart, freqEnd, durationMs, filterFreq]
+  ['square',   880, 220,  220, 1800],
+  ['sawtooth', 220, 1320, 200, 2400],
+  ['sine',     1320,330,  180, 3200],
+  ['triangle', 660, 1980, 160, 1600],
+  ['square',   440, 1760, 240, 2000],
+  ['sawtooth', 110, 880,  260, 1400],
+  ['sine',     1760,660,  150, 4000],
+  ['triangle', 330, 1100, 200, 2200],
+];
+function playClickSfx(){
+  const ctx = getAudio();
+  if(!ctx) return;
+  if(ctx.state === 'suspended') ctx.resume();
+  const p = SFX_PATTERNS[__sfxIdx % SFX_PATTERNS.length];
+  __sfxIdx++;
+  const [wave, f0, f1, durMs, filterHz] = p;
+  const now = ctx.currentTime;
+  const dur = durMs / 1000;
+  // variación aleatoria ±8% para que nunca suene IDÉNTICO
+  const jitter = 1 + (Math.random()-0.5) * 0.16;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  const filt = ctx.createBiquadFilter();
+  osc.type = wave;
+  osc.frequency.setValueAtTime(f0 * jitter, now);
+  osc.frequency.exponentialRampToValueAtTime(Math.max(40, f1 * jitter), now + dur);
+  filt.type = 'lowpass';
+  filt.frequency.value = filterHz;
+  filt.Q.value = 6;
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(0.22, now + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+  osc.connect(filt); filt.connect(gain); gain.connect(ctx.destination);
+  osc.start(now); osc.stop(now + dur + 0.02);
+}
 
 function clearPicked(){
   picked = [];
@@ -915,7 +1014,7 @@ document.getElementById('pinConfirm').onclick = async function(){
       localStorage.setItem('olimpo_pin', JSON.stringify(picked));
       closeModal();
       renderBoard();
-      alert((wasStaffSetup ? 'Panel de ' + pendingName + ' activado. ' : 'Listo. ') + 'Tu código de respaldo es ' + codigo + ' — anótalo. Sirve igual que tus emojis para volver a entrar como ' + pendingName + '.');
+      showBackupCode(pendingName, codigo, wasStaffSetup);
       return;
     } else {
       if(myPubkey !== pendingClaimPubkey){
@@ -1024,6 +1123,7 @@ function send(){
   const text = msgInput.value.trim();
   if(!text) return;
   if(!me){ alert('Primero toca tu personaje en el tablero y crea tu PIN.'); return; }
+  playClickSfx();
   msgInput.value='';
   bubbles[me] = { text: text, ts: Date.now() };
   saveBubbles();
