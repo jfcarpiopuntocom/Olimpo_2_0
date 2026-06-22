@@ -620,7 +620,13 @@ function saveBubbles(){ localStorage.setItem('olimpo_bubbles', JSON.stringify(bu
 // disponibles. Pelusa (avatars/pelusa.png) es la perrita de Jose — mascota
 // del club, no un personaje jugable (no tiene PIN). Nicknames nuevos ciclan
 // por hash entre los 10 diseños humanos (sin Pelusa).
-const HUMAN_AVATARS = ['mascot','cyborg02','cyborg03','cyborg04','cyborg05','cyborg06','cyborg07','cyborg08','cyborg09','cyborg10'];
+const HUMAN_AVATARS = [
+  // set "sofisticado" inclusivo — entran primero en el picker porque son
+  // los más cuidados estéticamente (afro/iridiscente/barbado/kimono/máscara/atlético)
+  'cyborg-afro','cyborg-iridescent','cyborg-bearded','cyborg-kimono','cyborg-mask','cyborg-athletic',
+  // set original 16-bit
+  'mascot','cyborg02','cyborg03','cyborg04','cyborg05','cyborg06','cyborg07','cyborg08','cyborg09','cyborg10'
+];
 // Avatares exclusivos del owner — solo aparecen en el picker cuando el
 // personaje es "Jose". Se muestran primero (lugar de honor) y avatarUrl()
 // los acepta como válidos sin caer al fallback.
