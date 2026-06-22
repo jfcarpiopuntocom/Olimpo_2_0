@@ -608,6 +608,13 @@ function saveBubbles(){ localStorage.setItem('olimpo_bubbles', JSON.stringify(bu
 // del club, no un personaje jugable (no tiene PIN). Nicknames nuevos ciclan
 // por hash entre los 10 diseños humanos (sin Pelusa).
 const HUMAN_AVATARS = ['mascot','cyborg02','cyborg03','cyborg04','cyborg05','cyborg06','cyborg07','cyborg08','cyborg09','cyborg10'];
+// Avatares exclusivos del owner — solo aparecen en el picker cuando el
+// personaje es "Jose". Se muestran primero (lugar de honor) y avatarUrl()
+// los acepta como válidos sin caer al fallback.
+const JOSE_EXTRA_AVATARS = ['jose-cyborg-a','jose-cyborg-b','jose-cyborg-c','jose-cyborg-d','jose-cyborg-e'];
+function avatarsFor(name){
+  return name === 'Jose' ? JOSE_EXTRA_AVATARS.concat(HUMAN_AVATARS) : HUMAN_AVATARS;
+}
 const FOUNDER_AVATAR = {
   'Jose':'mascot', 'David':'cyborg03', 'Fer':'cyborg05', 'Mateo':'cyborg07',
   'Kevin':'cyborg08', 'Matto':'cyborg09', 'Mateo Tusisabes':'cyborg10', 'Juan':'mascot',
@@ -619,7 +626,8 @@ function seedNum(name){
 }
 function avatarUrl(c){
   const chosen = personajesData[c.name] && personajesData[c.name].avatar;
-  const f = (chosen && HUMAN_AVATARS.indexOf(chosen)!==-1) ? chosen
+  const pool = avatarsFor(c.name);
+  const f = (chosen && pool.indexOf(chosen)!==-1) ? chosen
     : FOUNDER_AVATAR[c.name] || HUMAN_AVATARS[seedNum(c.name) % HUMAN_AVATARS.length];
   return 'avatars/' + f + '.png';
 }
@@ -758,10 +766,11 @@ const avatarGrid = document.getElementById('avatarGrid');
 function showAvatarPicker(name){
   const current = personajesData[name] && personajesData[name].avatar;
   const n = seedNum(name);
-  selectedAvatar = (current && HUMAN_AVATARS.indexOf(current)!==-1) ? current
-    : FOUNDER_AVATAR[name] || HUMAN_AVATARS[n % HUMAN_AVATARS.length];
+  const pool = avatarsFor(name);
+  selectedAvatar = (current && pool.indexOf(current)!==-1) ? current
+    : FOUNDER_AVATAR[name] || pool[n % pool.length];
   avatarGrid.innerHTML='';
-  HUMAN_AVATARS.forEach(function(av){
+  pool.forEach(function(av){
     const d = document.createElement('div');
     d.className = 'avatar-pick' + (av===selectedAvatar ? ' active' : '');
     d.innerHTML = '<img src="avatars/'+av+'.png" alt="'+av+'">';
