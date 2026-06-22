@@ -65,19 +65,12 @@ body{
 /* ---- topbar ---- */
 header{
   position:sticky;top:0;z-index:50;
-  background:
-    linear-gradient(90deg, var(--bg2) 0%, rgba(21,18,31,.6) 50%, rgba(21,18,31,.2) 100%),
-    url('avatars/masthead.jpg') right -20px center / auto 220px no-repeat,
-    var(--bg2);
+  background:var(--bg2);
   border-bottom:2px solid var(--gold);
-  padding:12px 16px;
+  padding:6px 16px;
   display:flex;align-items:center;justify-content:space-between;
 }
-.wordmark{
-  font-size:1.15rem;letter-spacing:.02em;font-weight:700;
-  color:var(--gold) !important;-webkit-text-fill-color:var(--gold) !important;
-}
-.wordmark span{color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important;}
+.wordmark-logo{height:40px;display:block}
 .online-pill{
   font-size:.82rem;border:1px solid var(--jade);border-radius:20px;padding:4px 10px;
   color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important;
@@ -261,7 +254,7 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
 <body>
 
 <header>
-  <div class="wordmark">OLIMPO <span>2.0</span></div>
+  <img class="wordmark-logo" src="avatars/logo.png" alt="Olimpo 2.0">
   <div class="online-pill"><span class="online-dot"></span><span id="onlineCount">11</span> en el club</div>
 </header>
 
@@ -484,7 +477,45 @@ async function getCanonicalClaim(name){
     if(next){ current = next; continue; }
     return { pubkey: data.supersededBy }; // la llave nueva nunca publicó nada propio, pero el puntero es válido
   }
-  return { pubkey: current.pubkey };
+  let content = {}; try{ content = JSON.parse(current.content) || {}; }catch(e){}
+  return { pubkey: current.pubkey, role: content.role, avatar: content.avatar };
+}
+
+// El avatar/rol que se MUESTRA viene de Nostr (tu emoji/PIN), no del espejo
+// de Firebase — Firebase puede fallar (reglas sin actualizar) y el avatar
+// debe "pegar" igual, porque la fuente real es tu llave. Se sincroniza en
+// lote (un solo viaje a los relés para todos los personajes conocidos) al
+// cargar la página y cada vez que aparece un personaje nuevo en el tablero.
+async function syncAvatarsFromNostr(names){
+  if(!names.length) return;
+  try{
+    const tags = names.map(claimTag);
+    const events = await withTimeout(pool.querySync(RELAYS, { kinds:[30078], '#d':tags, limit:200 }), 9000);
+    const byTag = {};
+    events.forEach(function(ev){
+      const tag = ev.tags.find(function(t){ return t[0]==='d'; });
+      if(!tag) return;
+      (byTag[tag[1]] = byTag[tag[1]] || []).push(ev);
+    });
+    names.forEach(function(name){
+      const evs = byTag[claimTag(name)];
+      if(!evs || !evs.length) return;
+      evs.sort(function(a,b){ return a.created_at-b.created_at; });
+      let current = evs[0];
+      const visited = new Set();
+      while(current && !visited.has(current.pubkey)){
+        visited.add(current.pubkey);
+        let data; try{ data = JSON.parse(current.content); }catch(e){ data=null; }
+        if(!data || !data.supersededBy || data.supersededBy===current.pubkey) break;
+        const next = evs.find(function(e){ return e.pubkey===data.supersededBy; });
+        if(!next) break;
+        current = next;
+      }
+      let data = {}; try{ data = JSON.parse(current.content) || {}; }catch(e){}
+      personajesData[name] = Object.assign({}, personajesData[name], { pubkey: current.pubkey, role: data.role, avatar: data.avatar });
+    });
+    renderBoard();
+  }catch(e){}
 }
 
 const app = initializeApp(firebaseConfig);
@@ -831,6 +862,9 @@ document.getElementById('pinConfirm').onclick = async function(){
       // solo sirve para que el tablero pueda listar nicknames sin tener que
       // adivinarlos buscando en relés. Si falla, no pasa nada.
       setDoc(doc(db,'olimpo_personajes',pendingName), { pubkey: myPubkey, role: role, avatar: avatar, lastSeen: serverTimestamp() }).catch(function(){});
+      // No esperamos a Firebase ni a un nuevo viaje a los relés para reflejarlo
+      // — ya sabemos lo que acabamos de publicar en Nostr, se pega de una vez.
+      personajesData[pendingName] = Object.assign({}, personajesData[pendingName], { pubkey: myPubkey, role: role, avatar: avatar });
 
       var codigo = picked.join('-');
       var wasStaffSetup = !!pendingStaffRole;
@@ -862,6 +896,7 @@ document.getElementById('pinConfirm').onclick = async function(){
         const signed2 = finalizeEvent(tmpl2, secretKey);
         pool.publish(RELAYS, signed2);
         setDoc(doc(db,'olimpo_personajes',pendingName), { pubkey: myPubkey, role: role, avatar: selectedAvatar, lastSeen: serverTimestamp() }).catch(function(){});
+        personajesData[pendingName] = Object.assign({}, personajesData[pendingName], { pubkey: myPubkey, role: role, avatar: selectedAvatar });
       } else {
         setDoc(doc(db,'olimpo_personajes',pendingName), { pubkey: myPubkey, role: role, lastSeen: serverTimestamp() }).catch(function(){});
       }
@@ -896,6 +931,11 @@ onSnapshot(collection(db,'olimpo_personajes'), function(snap){
   onlineCountEl.textContent = String(active); // el sufijo " en el club" ya está en el HTML del pill
   renderBoard();
   loadDmInbox();
+  // Nostr (tu llave/emoji) manda sobre el espejo de Firebase, siempre — el
+  // espejo puede llegar con avatar/rol viejo o faltante y no debe pisar lo
+  // real. Se re-sincroniza cada vez que Firebase trae datos nuevos.
+  const allNames = CHARS.map(function(c){ return c.name; }).concat(Object.keys(data));
+  syncAvatarsFromNostr(Array.from(new Set(allNames)));
 });
 
 /* ---- burbujas de diálogo: 100% P2P vía Trystero/Nostr, cero servidor.
@@ -980,6 +1020,7 @@ Object.keys(bubbles).forEach(function(n){
   if(bubbles[n] && STALE_TEST_MESSAGES.indexOf(bubbles[n].text)!==-1){ delete bubbles[n]; }
 });
 saveBubbles();
+syncAvatarsFromNostr(CHARS.map(function(c){ return c.name; }));
 (async function backfillFromNostr(){
   try{
     const events = await withTimeout(pool.querySync(RELAYS, { kinds:[1], '#t':['olimpo-club-v1'], limit:100 }), 8000);
