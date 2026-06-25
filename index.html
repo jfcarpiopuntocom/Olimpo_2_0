@@ -232,28 +232,42 @@ main.console{max-width:1280px;margin:0 auto;padding:14px;display:flex;flex-direc
 #anuncioImgStatus{color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important;font-size:.78rem}
 .anuncio-type-sel{background:var(--bg3);color:#FFFFFF !important;border:1px solid rgba(255,255,255,.15);border-radius:6px;padding:5px 8px;font-size:.85rem;width:100%}
 
-/* ---- radio ---- */
+/* ---- radio: slim translúcido — JFC 2026-06-24 ---- */
 .radio-bar{
   position:fixed;bottom:0;left:0;right:0;z-index:95;
-  background:var(--bg2);border-top:2px solid var(--jade);
-  padding:6px 10px;display:flex;align-items:center;gap:8px;
+  background:rgba(11,10,18,0.78);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border-top:1px solid rgba(40,236,170,.28);
+  padding:2px 8px;display:flex;align-items:center;gap:5px;
   flex-wrap:nowrap;overflow-x:auto;white-space:nowrap;
-  font-family:Arial,sans-serif;
+  font-family:Arial,sans-serif;min-height:34px;
 }
 .radio-track{
-  font-size:.74rem;color:var(--text2) !important;-webkit-text-fill-color:var(--text2) !important;
+  font-size:.64rem;color:var(--text2) !important;-webkit-text-fill-color:var(--text2) !important;
   overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
-  flex:0 1 90px;min-width:0;
+  flex:0 1 72px;min-width:0;
 }
-.radio-label{font-size:.74rem;color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important;font-weight:700;letter-spacing:.04em;flex:0 0 auto}
-.radio-genres{display:flex;gap:5px;flex-wrap:nowrap;flex:0 0 auto}
+.radio-label{font-size:.6rem;color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important;font-weight:700;letter-spacing:.07em;flex:0 0 auto}
+.radio-genres{display:flex;gap:3px;flex-wrap:nowrap;flex:0 0 auto}
 .radio-genre{
-  font-size:.72rem;font-weight:700;padding:6px 8px;border-radius:7px;border:1px solid var(--gold);
+  position:relative;
+  font-size:.64rem;font-weight:700;padding:2px 6px;border-radius:5px;border:1px solid var(--gold);
   background:transparent;color:var(--gold) !important;-webkit-text-fill-color:var(--gold) !important;
-  font-family:Arial,sans-serif;cursor:pointer;min-height:36px;flex:0 0 auto;white-space:nowrap;
+  font-family:Arial,sans-serif;cursor:pointer;min-height:26px;flex:0 0 auto;white-space:nowrap;
 }
 .radio-genre.active{background:rgba(232,160,32,0.18);box-shadow:0 0 0 2px var(--gold) inset}
 .radio-genre:disabled{border-color:var(--text3);color:var(--text3) !important;-webkit-text-fill-color:var(--text3) !important;cursor:not-allowed}
+/* tooltip nombre completo: tap en mobile, hover en desktop — JFC 2026-06-24 */
+.radio-tip{
+  position:absolute;bottom:calc(100% + 5px);left:50%;transform:translateX(-50%);
+  background:#0B0A12;border:1px solid var(--jade);border-radius:5px;
+  padding:2px 7px;font-size:.6rem;font-weight:700;white-space:nowrap;
+  color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important;
+  pointer-events:none;z-index:97;
+  visibility:hidden;
+}
+.radio-genre:hover .radio-tip,
+.radio-genre.tip-on .radio-tip{visibility:visible;}
 
 /* ---- pin modal ---- */
 .pin-overlay{
@@ -328,6 +342,11 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
 
   <aside class="club-sidebar">
 
+    <div class="panel" id="eventos-panel">
+      <div class="panel-title">Anuncios del club</div>
+      <div id="eventos-list"><div class="anuncio">Cargando…</div></div>
+    </div>
+
     <div class="panel" id="mostrador-panel">
       <div class="panel-title">El Mostrador</div>
       <div id="anuncios-list"><div class="anuncio-card">Cargando especiales…</div></div>
@@ -385,11 +404,6 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
       </div>
     </div>
 
-    <div class="panel" id="eventos-panel">
-      <div class="panel-title">Anuncios del club</div>
-      <div id="eventos-list"><div class="anuncio">Cargando…</div></div>
-    </div>
-
     <div class="panel" id="confianza-panel">
       <div class="panel-title">Confidencialidad</div>
       <p class="trust-text">Sin nombres reales. Tu PIN nunca se guarda — deriva una llave que solo vive en tu navegador, nadie puede verla ni recuperarla.</p>
@@ -411,11 +425,11 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
   <div class="radio-label">RADIO OLIMPO LIVE</div>
   <div class="radio-track" id="radioTrack"></div>
   <div class="radio-genres">
-    <button class="radio-genre" data-genre="progressive_house">House</button>
-    <button class="radio-genre" data-genre="electronica_70s">70s</button>
-    <button class="radio-genre" data-genre="progressive_lounge">Lounge</button>
-    <button class="radio-genre" data-genre="burning_man">Playa</button>
-    <button class="radio-genre" id="radioOlimpo" disabled title="Próximamente: mezclas de los DJs del club">DJs Olimpo (pronto)</button>
+    <button class="radio-genre" data-genre="progressive_house">House<span class="radio-tip">Progressive House</span></button>
+    <button class="radio-genre" data-genre="electronica_70s">70s<span class="radio-tip">Electrónica 70s</span></button>
+    <button class="radio-genre" data-genre="progressive_lounge">Lounge<span class="radio-tip">Progressive Lounge</span></button>
+    <button class="radio-genre" data-genre="burning_man">Playa<span class="radio-tip">Burning Man Festival</span></button>
+    <button class="radio-genre" id="radioOlimpo" disabled>DJs<span class="radio-tip">DJs Olimpo — próximamente</span></button>
     <button class="radio-genre" id="radioStop">■ Stop</button>
   </div>
 </div>
@@ -1645,7 +1659,13 @@ document.getElementById('eventos-list').innerHTML = '<div class="anuncio">Noveda
   }
 
   document.querySelectorAll('.radio-genre[data-genre]').forEach(function(b){
-    b.onclick=function(){ playRadio(b.dataset.genre,b); };
+    b.onclick=function(){
+      // tooltip nombre completo: visible 2.2s al tocar (mobile) — JFC 2026-06-24
+      b.classList.add('tip-on');
+      clearTimeout(b.__tipTimer);
+      b.__tipTimer = setTimeout(function(){ b.classList.remove('tip-on'); }, 2200);
+      playRadio(b.dataset.genre,b);
+    };
   });
 
   document.getElementById('radioStop').onclick = function(){
