@@ -1357,19 +1357,14 @@ onSnapshot(collection(db,'olimpo_personajes'), function(snap){
     if(ms >= cutoff72h) visited72h++;
     if(ms >= cutoff2h)  active2h++;
   });
-  // Badge de tres tiers — profundidad temporal sin infraestructura extra.
-  // Tier 1 (activos hoy): alguien estuvo en las últimas 2h — muestra presencia real.
-  // Tier 2 (esta semana): alguien visitó en 72h — engagement social (fix: soft ping en page load).
-  // Tier 3 (miembros totales): nadie reciente pero el club tiene historia — da contexto.
-  // Tier 0: club vacío / primer día — "llegando al club".
+  // Badge de dos métricas — mismo diseño original, ahora con datos correctos
+  // gracias al soft ping en page load que escribe lastSeen sin necesitar PIN.
+  // visited72h = engagement social (quién visitó esta semana)
+  // active2h   = presencia en vivo (quién está ahora mismo)
   const totalMembers = Object.keys(data).length;
   let badgeText;
-  if(active2h >= 1){
-    badgeText = visited72h + ' visitaron · ' + active2h + ' activos ahora';
-  } else if(visited72h >= 1){
-    badgeText = visited72h + ' esta semana · ' + totalMembers + ' miembros';
-  } else if(totalMembers >= 1){
-    badgeText = totalMembers + ' en el club · nadie hoy';
+  if(visited72h >= 1){
+    badgeText = visited72h + ' visitaron · ' + active2h + ' activos hoy';
   } else {
     badgeText = 'llegando al club';
   }
