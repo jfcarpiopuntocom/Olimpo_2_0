@@ -1348,23 +1348,20 @@ onSnapshot(collection(db,'olimpo_personajes'), function(snap){
   // ventana 72h: cuántos visitaron el club esta semana (engagement social).
   // ventana 2h: cuántos están activos ahora mismo (presencia en vivo).
   // Ambas cutoffs calculadas sobre el mismo personajesData — cero queries adicionales.
-  const cutoff2h  = Date.now() -  2*60*60*1000;
+  const cutoff4h  = Date.now() -  4*60*60*1000;
   const cutoff72h = Date.now() - 72*60*60*1000;
-  let active2h = 0, visited72h = 0;
+  let active4h = 0, visited72h = 0;
   Object.keys(data).forEach(function(n){
     const ls = data[n].lastSeen;
     const ms = ls && ls.toMillis ? ls.toMillis() : 0;
     if(ms >= cutoff72h) visited72h++;
-    if(ms >= cutoff2h)  active2h++;
+    if(ms >= cutoff4h)  active4h++;
   });
-  // Badge de dos métricas — mismo diseño original, ahora con datos correctos
-  // gracias al soft ping en page load que escribe lastSeen sin necesitar PIN.
-  // visited72h = engagement social (quién visitó esta semana)
-  // active2h   = presencia en vivo (quién está ahora mismo)
+  // Badge: visited72h = miembros activos esta semana · active4h = asomaron hoy (ventana 4h)
   const totalMembers = Object.keys(data).length;
   let badgeText;
   if(visited72h >= 1){
-    badgeText = visited72h + ' visitaron · ' + active2h + ' activos hoy';
+    badgeText = visited72h + ' miembros activos · ' + active4h + ' asomaron hoy';
   } else {
     badgeText = 'llegando al club';
   }
@@ -1396,8 +1393,8 @@ onSnapshot(collection(db,'olimpo_personajes'), function(snap){
   })();
 
   // 1: tab title dinámico — notificación pasiva para quien tiene el club en background
-  document.title = active2h >= 1
-    ? ('OLIMPO (' + active2h + ') — Consola del Club')
+  document.title = active4h >= 1
+    ? ('OLIMPO (' + active4h + ') — Consola del Club')
     : 'OLIMPO 2.0 — Consola del Club';
   renderBoard();
   loadDmInbox();
