@@ -202,34 +202,96 @@ main.console{max-width:1280px;margin:0 auto;padding:14px;display:flex;flex-direc
 .trust-text:last-child{margin-bottom:0}
 .trust-text b{color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important}
 
-/* ---- anuncios world-class ---- */
-.anuncio-card{border-left:4px solid var(--gold);padding:10px 14px;margin-bottom:10px;border-radius:0 8px 8px 0;background:rgba(232,160,32,.05)}
-.anuncio-card .anuncio-body{font-size:.9rem;color:#FFFFFF !important;-webkit-text-fill-color:#FFFFFF !important;line-height:1.45}
-.anuncio-card .anuncio-badge{display:inline-block;font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:12px;margin-bottom:6px}
-.anuncio-card .anuncio-img{max-width:100%;border-radius:8px;margin-top:8px;display:block}
-.anuncio-card.tipo-especial_dia{border-left-color:var(--gold)}
-.anuncio-card.tipo-especial_dia .anuncio-badge{background:var(--gold);color:#0B0A12 !important;-webkit-text-fill-color:#0B0A12 !important}
-.anuncio-card.tipo-especial_semana{border-left-color:var(--jade)}
-.anuncio-card.tipo-especial_semana .anuncio-badge{background:var(--jade);color:#0B0A12 !important;-webkit-text-fill-color:#0B0A12 !important}
-.anuncio-card.tipo-urgente{border-left-color:var(--ember);border:2px solid var(--ember);background:rgba(232,96,64,.1);animation:urgentePulse 1.4s ease-in-out infinite}
-.anuncio-card.tipo-urgente .anuncio-badge{background:var(--ember);color:#FFFFFF !important;-webkit-text-fill-color:#FFFFFF !important}
-@keyframes urgentePulse{0%,100%{box-shadow:0 0 0 0 rgba(232,96,64,0)}50%{box-shadow:0 0 12px 2px rgba(232,96,64,.45)}}
-@media(prefers-reduced-motion:reduce){.anuncio-card.tipo-urgente{animation:none}}
+/* ════════════════════════════════════════════
+   ANUNCIOS — world-class display cards
+   ════════════════════════════════════════════ */
+#anuncios-list{display:flex;flex-direction:column;gap:8px}
+.anuncio-card{
+  position:relative;border-left:4px solid var(--gold);border-radius:0 10px 10px 0;
+  padding:12px 16px;overflow:hidden;
+  background:linear-gradient(135deg,rgba(232,160,32,.06) 0%,rgba(11,10,18,.5) 100%);
+  transition:transform .15s;
+}
+.anuncio-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.03) 0%,transparent 55%);pointer-events:none}
+.anuncio-card .anuncio-body{font-size:.9rem;color:#FFFFFF !important;-webkit-text-fill-color:#FFFFFF !important;line-height:1.5;word-break:break-word}
+.anuncio-card .anuncio-badge{display:inline-flex;align-items:center;gap:4px;font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 10px;border-radius:20px;margin-bottom:8px}
+.anuncio-card .anuncio-media{width:100%;border-radius:8px;margin-top:10px;display:block;cursor:zoom-in}
+.anuncio-card .anuncio-media.is-gif{max-height:none}
+.anuncio-card .anuncio-ts{display:block;font-size:.65rem;margin-top:6px;color:rgba(255,255,255,.28) !important;-webkit-text-fill-color:rgba(255,255,255,.28) !important}
+.anuncio-del{position:absolute;top:7px;right:9px;background:none;border:none;font-size:.85rem;cursor:pointer;opacity:.35;padding:2px 5px;border-radius:4px;color:#FFFFFF !important;-webkit-text-fill-color:#FFFFFF !important;line-height:1}
+.anuncio-del:hover{opacity:1;background:rgba(232,96,64,.25)}
+/* Normal */
+.anuncio-card.tipo-normal{border-left-color:rgba(255,255,255,.25);background:rgba(255,255,255,.03)}
+/* Especial del día */
+.anuncio-card.tipo-especial_dia{border-left-color:var(--gold);background:linear-gradient(135deg,rgba(232,160,32,.12) 0%,rgba(11,10,18,.55) 100%)}
+.anuncio-card.tipo-especial_dia .anuncio-badge{background:var(--gold);color:#0B0A12 !important;-webkit-text-fill-color:#0B0A12 !important;box-shadow:0 0 12px rgba(232,160,32,.55)}
+/* Especial semana */
+.anuncio-card.tipo-especial_semana{border-left-color:var(--jade);background:linear-gradient(135deg,rgba(40,236,170,.08) 0%,rgba(11,10,18,.55) 100%)}
+.anuncio-card.tipo-especial_semana .anuncio-badge{background:var(--jade);color:#0B0A12 !important;-webkit-text-fill-color:#0B0A12 !important;box-shadow:0 0 12px rgba(40,236,170,.55)}
+/* URGENTE */
+.anuncio-card.tipo-urgente{border:2px solid var(--ember);border-radius:10px;background:linear-gradient(135deg,rgba(232,96,64,.18) 0%,rgba(11,10,18,.6) 100%);animation:urgentePulse 1.6s ease-in-out infinite}
+.anuncio-card.tipo-urgente .anuncio-badge{background:var(--ember);color:#FFFFFF !important;-webkit-text-fill-color:#FFFFFF !important;box-shadow:0 0 16px rgba(232,96,64,.7);animation:urgenteBlink 1.6s ease-in-out infinite}
+.anuncio-card.tipo-urgente .anuncio-body{font-weight:700;font-size:.95rem}
+@keyframes urgentePulse{0%,100%{box-shadow:0 0 0 0 rgba(232,96,64,0)}50%{box-shadow:0 0 22px 5px rgba(232,96,64,.35)}}
+@keyframes urgenteBlink{0%,100%{opacity:1}50%{opacity:.55}}
+@media(prefers-reduced-motion:reduce){.anuncio-card.tipo-urgente,.anuncio-card.tipo-urgente .anuncio-badge{animation:none}}
 
-/* ---- Jose admin panel ---- */
-#joseAdminPanel{display:none;margin-top:14px;padding-top:12px;border-top:1px solid rgba(232,160,32,.3)}
-.admin-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
-.admin-row label{font-size:.78rem;color:var(--text2) !important;-webkit-text-fill-color:var(--text2) !important;white-space:nowrap;min-width:52px}
-.admin-row input[type=text]{flex:1;min-width:0}
-#anuncioText{width:100%;resize:vertical;min-height:56px;margin-bottom:8px;background:var(--bg3);color:#FFFFFF !important;-webkit-text-fill-color:#FFFFFF !important;border:1px solid rgba(255,255,255,.15);border-radius:6px;padding:7px 10px;font-family:inherit;font-size:.88rem;box-sizing:border-box}
-.emoji-palette{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;padding:6px;background:var(--bg3);border-radius:8px}
-.emoji-btn{font-size:1.25rem;cursor:pointer;padding:2px 4px;border-radius:4px;background:none;border:none;line-height:1;transition:transform .1s}
-.emoji-btn:hover{transform:scale(1.3)}
-.color-swatches{display:flex;gap:6px;flex-wrap:wrap}
-.color-swatch{width:22px;height:22px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0}
-.color-swatch.active{border-color:#FFFFFF;transform:scale(1.15)}
-#anuncioImgStatus{color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important;font-size:.78rem}
-.anuncio-type-sel{background:var(--bg3);color:#FFFFFF !important;border:1px solid rgba(255,255,255,.15);border-radius:6px;padding:5px 8px;font-size:.85rem;width:100%}
+/* ════════════════════════════════════════════
+   JOSE ADMIN PANEL
+   ════════════════════════════════════════════ */
+#joseAdminPanel{display:none;margin-top:14px;padding-top:14px;border-top:1px solid rgba(232,160,32,.35)}
+/* type tabs */
+.type-tabs{display:flex;gap:5px;margin-bottom:10px;flex-wrap:wrap}
+.type-tab{flex:1;min-width:60px;padding:6px 4px;border-radius:8px;border:1.5px solid rgba(255,255,255,.15);background:rgba(255,255,255,.05);font-size:.75rem;font-weight:700;cursor:pointer;color:#FFFFFF !important;-webkit-text-fill-color:#FFFFFF !important;transition:all .15s;line-height:1.2;text-align:center}
+.type-tab.gold{border-color:rgba(232,160,32,.4)}
+.type-tab.jade{border-color:rgba(40,236,170,.4)}
+.type-tab.ember{border-color:rgba(232,96,64,.4)}
+.type-tab.active-gold{background:rgba(232,160,32,.2);border-color:var(--gold);box-shadow:0 0 8px rgba(232,160,32,.35)}
+.type-tab.active-jade{background:rgba(40,236,170,.15);border-color:var(--jade);box-shadow:0 0 8px rgba(40,236,170,.3)}
+.type-tab.active-ember{background:rgba(232,96,64,.2);border-color:var(--ember);box-shadow:0 0 8px rgba(232,96,64,.4)}
+.type-tab.active-normal{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.4)}
+/* text area */
+#anuncioText{width:100%;resize:vertical;min-height:60px;margin-bottom:8px;background:var(--bg3);color:#FFFFFF !important;-webkit-text-fill-color:#FFFFFF !important;border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:8px 11px;font-family:inherit;font-size:.88rem;box-sizing:border-box;line-height:1.5}
+/* emoji */
+.emoji-cats{display:flex;gap:5px;margin-bottom:5px}
+.ecat{background:var(--bg3);border:1.5px solid rgba(255,255,255,.1);border-radius:6px;font-size:1rem;padding:4px 7px;cursor:pointer;transition:border-color .1s}
+.ecat.active{border-color:var(--jade)}
+.emoji-palette{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:10px;padding:6px;background:var(--bg3);border-radius:8px;max-height:90px;overflow-y:auto}
+.emoji-btn{font-size:1.2rem;cursor:pointer;padding:2px 3px;border-radius:4px;background:none;border:none;line-height:1;transition:transform .1s}
+.emoji-btn:hover{transform:scale(1.35)}
+/* colors */
+.color-swatches{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.color-swatch{width:24px;height:24px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0;transition:transform .1s}
+.color-swatch.active{border-color:#FFFFFF;transform:scale(1.2);box-shadow:0 0 6px rgba(255,255,255,.4)}
+/* image */
+.img-upload-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.img-upload-row label{font-size:.78rem;color:var(--text2) !important;-webkit-text-fill-color:var(--text2) !important;white-space:nowrap}
+#anuncioImgStatus{font-size:.78rem;color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important}
+.img-thumb{width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid rgba(255,255,255,.2);display:none}
+/* gif */
+#gifToggleBtn{width:100%;margin-bottom:6px;background:rgba(255,255,255,.06);border:1.5px dashed rgba(255,255,255,.2);border-radius:8px;padding:8px;font-size:.82rem;color:#FFFFFF !important;-webkit-text-fill-color:#FFFFFF !important;cursor:pointer;text-align:center;transition:background .15s}
+#gifToggleBtn:hover{background:rgba(255,255,255,.1)}
+#gifPicker{display:none;background:var(--bg3);border-radius:10px;padding:10px;margin-bottom:8px}
+#gifSearchInput{width:100%;background:var(--bg);color:#FFFFFF !important;-webkit-text-fill-color:#FFFFFF !important;border:1px solid rgba(255,255,255,.15);border-radius:6px;padding:6px 10px;font-size:.85rem;box-sizing:border-box;margin-bottom:8px}
+.gif-cats{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
+.gif-cat-btn{background:var(--bg);border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:3px 10px;font-size:.75rem;cursor:pointer;color:#FFFFFF !important;-webkit-text-fill-color:#FFFFFF !important;transition:border-color .1s}
+.gif-cat-btn:hover,.gif-cat-btn.active{border-color:var(--jade)}
+#gifGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;max-height:180px;overflow-y:auto}
+.gif-item{border-radius:6px;overflow:hidden;cursor:pointer;aspect-ratio:1;background:var(--bg)}
+.gif-item img{width:100%;height:100%;object-fit:cover;display:block}
+.gif-item:hover{outline:2px solid var(--jade)}
+#gifPreviewRow{display:none;align-items:center;gap:8px;margin-bottom:8px;background:var(--bg3);border-radius:8px;padding:6px 10px}
+#gifPreviewThumb{height:48px;border-radius:5px}
+#gifPreviewLabel{flex:1;font-size:.78rem;color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important}
+#gifRemoveBtn{background:none;border:none;font-size:1rem;cursor:pointer;color:var(--ember) !important;-webkit-text-fill-color:var(--ember) !important}
+/* preview */
+#anuncioPreviewWrap{margin-bottom:10px;display:none}
+#anuncioPreviewWrap .preview-label{font-size:.72rem;color:var(--text3) !important;-webkit-text-fill-color:var(--text3) !important;margin-bottom:4px;text-transform:uppercase;letter-spacing:.08em}
+/* publish row */
+.publish-row{display:flex;gap:8px}
+.publish-row .btn{flex:1}
+.publish-row .btn-clear{background:rgba(255,255,255,.08);flex:0 0 auto;padding:0 14px}
+#anuncioStatus{display:none;font-size:.82rem;margin-top:6px;color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important}
 
 /* ---- radio: slim translúcido — JFC 2026-06-24 ---- */
 .radio-bar{
@@ -447,40 +509,81 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
 
       <!-- Panel admin — solo visible cuando me === 'Jose' -->
       <div id="joseAdminPanel">
-        <div class="panel-title" style="margin-bottom:8px">📡 Publicar Anuncio</div>
-        <select id="anuncioType" class="anuncio-type-sel" style="margin-bottom:8px">
-          <option value="normal">Normal</option>
-          <option value="especial_dia">✦ Especial del Día</option>
-          <option value="especial_semana">★ Especial de la Semana</option>
-          <option value="urgente">⚡ URGENTE</option>
-        </select>
-        <textarea id="anuncioText" placeholder="Texto del anuncio…" maxlength="300"></textarea>
-        <div class="emoji-palette" id="emojiPalette"></div>
-        <div class="admin-row">
-          <label>Color:</label>
-          <div class="color-swatches" id="colorSwatches">
-            <button class="color-swatch active" data-color="#E8A020" style="background:#E8A020"></button>
-            <button class="color-swatch" data-color="#28ECAA" style="background:#28ECAA"></button>
-            <button class="color-swatch" data-color="#E86040" style="background:#E86040"></button>
-            <button class="color-swatch" data-color="#CC44FF" style="background:#CC44FF"></button>
-            <button class="color-swatch" data-color="#44CCFF" style="background:#44CCFF"></button>
-            <button class="color-swatch" data-color="#FF44AA" style="background:#FF44AA"></button>
-          </div>
+        <div class="panel-title" style="margin-bottom:10px">📡 Nuevo Anuncio</div>
+
+        <!-- Type tabs -->
+        <div class="type-tabs">
+          <button class="type-tab active-normal" data-type="normal">Normal</button>
+          <button class="type-tab gold" data-type="especial_dia">✦ HOY</button>
+          <button class="type-tab jade" data-type="especial_semana">★ SEMANA</button>
+          <button class="type-tab ember" data-type="urgente">⚡ URGENTE</button>
         </div>
-        <div class="admin-row">
-          <label>Imagen:</label>
-          <input type="file" id="anuncioImg" accept="image/*" style="flex:1;font-size:.78rem">
+
+        <!-- Text -->
+        <textarea id="anuncioText" placeholder="Texto del anuncio… emojis bienvenidos 🔥" maxlength="400"></textarea>
+
+        <!-- Emoji categories -->
+        <div class="emoji-cats">
+          <button class="ecat active" data-cat="futurista" title="Futurista">🚀</button>
+          <button class="ecat" data-cat="alien" title="Alien/Cosmos">👽</button>
+          <button class="ecat" data-cat="mushroom" title="Mushroom">🍄</button>
+          <button class="ecat" data-cat="psico" title="Psicodelia">🌈</button>
+          <button class="ecat" data-cat="energia" title="Energía">🔥</button>
+        </div>
+        <div class="emoji-palette" id="emojiPalette"></div>
+
+        <!-- Color swatches -->
+        <div class="color-swatches" id="colorSwatches">
+          <button class="color-swatch active" data-color="#E8A020" style="background:#E8A020" title="Dorado"></button>
+          <button class="color-swatch" data-color="#28ECAA" style="background:#28ECAA" title="Jade"></button>
+          <button class="color-swatch" data-color="#E86040" style="background:#E86040" title="Ember"></button>
+          <button class="color-swatch" data-color="#CC44FF" style="background:#CC44FF" title="Púrpura"></button>
+          <button class="color-swatch" data-color="#44CCFF" style="background:#44CCFF" title="Cyan"></button>
+          <button class="color-swatch" data-color="#FF44AA" style="background:#FF44AA" title="Rosa"></button>
+          <button class="color-swatch" data-color="#FFEE44" style="background:#FFEE44" title="Amarillo"></button>
+          <button class="color-swatch" data-color="#FFFFFF" style="background:#FFFFFF" title="Blanco"></button>
+        </div>
+
+        <!-- Image upload -->
+        <div class="img-upload-row">
+          <label>📸</label>
+          <input type="file" id="anuncioImg" accept="image/*,image/gif" style="flex:1;font-size:.75rem">
+          <img id="anuncioImgThumb" class="img-thumb" alt="">
           <span id="anuncioImgStatus"></span>
         </div>
-        <div class="admin-row">
-          <label>GIF URL:</label>
-          <input type="text" id="anuncioGif" placeholder="https://media.giphy.com/…">
+
+        <!-- GIF picker -->
+        <button id="gifToggleBtn">🎞️ Buscar GIF animado</button>
+        <div id="gifPicker">
+          <input id="gifSearchInput" placeholder="psychedelic, alien, mushroom, cosmos…" autocomplete="off">
+          <div class="gif-cats">
+            <button class="gif-cat-btn active" data-q="psychedelic">🌈 Psico</button>
+            <button class="gif-cat-btn" data-q="alien space">👽 Alien</button>
+            <button class="gif-cat-btn" data-q="mushroom trippy">🍄 Shroom</button>
+            <button class="gif-cat-btn" data-q="cosmos nebula">🪐 Cosmos</button>
+            <button class="gif-cat-btn" data-q="fire neon">🔥 Fuego</button>
+            <button class="gif-cat-btn" data-q="smoke shop">💨 Smoke</button>
+          </div>
+          <div id="gifGrid"><div style="font-size:.78rem;color:rgba(255,255,255,.4);padding:8px">Cargando GIFs…</div></div>
         </div>
-        <div style="display:flex;gap:8px;margin-top:4px">
-          <button class="btn" id="anuncioPublish" style="flex:1">Publicar</button>
-          <button class="btn" id="anuncioClear" style="background:rgba(255,255,255,.1)">Limpiar</button>
+        <div id="gifPreviewRow">
+          <img id="gifPreviewThumb" alt="">
+          <span id="gifPreviewLabel">GIF seleccionado</span>
+          <button id="gifRemoveBtn" title="Quitar">✕</button>
         </div>
-        <p id="anuncioStatus" class="hint" style="margin-top:6px;color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important;display:none"></p>
+
+        <!-- Live preview -->
+        <div id="anuncioPreviewWrap">
+          <div class="preview-label">Vista previa</div>
+          <div id="anuncioPreviewCard"></div>
+        </div>
+
+        <!-- Publish -->
+        <div class="publish-row">
+          <button class="btn" id="anuncioPublish">Publicar</button>
+          <button class="btn btn-clear" id="anuncioClear">Limpiar</button>
+        </div>
+        <p id="anuncioStatus"></p>
       </div>
 
       <p class="hint" style="margin-top:10px">Atiende Jose. Pronto: chatbot 24/7 aquí mismo para pedidos y preguntas.</p>
@@ -1820,142 +1923,306 @@ async function loadDmInbox(){
   }catch(e){}
 }
 
-/* ---- Anuncios del Mostrador — 100% Nostr, publicados por Jose ---- */
-const EMOJIS_PALETTE = ['🚀','🌌','🪐','💫','🔮','🌀','🍄','🌿','🦋','⚡','🔥','👾','🛸','🎭','🌊','✨','🤖','🎆','🌈','🔴','🟣','🟢','🔵','🎯','🧬','🌀','🫧','🪬','🧿','🎪'];
+/* ══════════════════════════════════════════════════════════════
+   ANUNCIOS DEL MOSTRADOR — world-class, 100% Nostr
+   ══════════════════════════════════════════════════════════════ */
 
+// ── estado del composer ──────────────────────────────────────
 let selectedAnuncioColor = '#E8A020';
-let uploadedImageUrl = '';
+let selectedAnuncioType  = 'normal';
+let uploadedImageUrl     = '';
+let selectedGifUrl       = '';
 
-// Inicializa la paleta de emojis del panel Jose
-(function initEmojiPalette(){
+// ── emoji por categoría ──────────────────────────────────────
+const EMOJI_CATS = {
+  futurista: ['🚀','🌌','🪐','💫','🔭','🛸','🤖','👾','🦾','🦿','🧬','🔬','💊','🧪','⚗️','🔮','💡','🌐','🎯','📡','⚙️','🔩','🖥️','🧠','⭐','🌠'],
+  alien:     ['👽','🛸','🌌','🪐','🌙','☄️','🌟','✨','⭐','🌀','🔵','🟣','🟢','💠','🔷','🔹','🫧','🪬','🧿','🌌','🌠','🌃'],
+  mushroom:  ['🍄','🌿','🌱','🌾','🌲','🦋','🐛','🌊','🌺','🌸','🍀','🌻','🌳','🦜','🦚','🌈','🌍','🐚','🌴','🦠','🌵','🪴'],
+  psico:     ['🌈','🎆','🎇','🎨','🎭','🎪','🎠','🫠','🤯','😵','🌀','💫','✨','🔮','🪄','🎴','🃏','🎲','🎡','🎢','🌈','🪩','🏮'],
+  energia:   ['🔥','⚡','💥','🌊','🌪️','🌋','☄️','💫','✨','🎆','🌟','💪','❤️‍🔥','🫀','🔴','🟠','🔆','🌞','⚡','🏆','💎','👑']
+};
+let currentEmojiCat = 'futurista';
+
+function renderEmojiPalette(){
   const pal = document.getElementById('emojiPalette');
   if(!pal) return;
-  EMOJIS_PALETTE.forEach(function(em){
+  pal.innerHTML = '';
+  (EMOJI_CATS[currentEmojiCat]||[]).forEach(function(em){
     const btn = document.createElement('button');
-    btn.className = 'emoji-btn';
-    btn.textContent = em;
+    btn.className = 'emoji-btn'; btn.textContent = em;
     btn.onclick = function(){
       const t = document.getElementById('anuncioText');
-      const pos = t.selectionStart;
-      t.value = t.value.slice(0,pos) + em + t.value.slice(t.selectionEnd);
-      t.setSelectionRange(pos+em.length, pos+em.length);
-      t.focus();
+      const pos = t.selectionStart||t.value.length;
+      t.value = t.value.slice(0,pos)+em+t.value.slice(t.selectionEnd||pos);
+      t.setSelectionRange(pos+em.length,pos+em.length);
+      t.focus(); updatePreview();
     };
     pal.appendChild(btn);
   });
-})();
+}
+document.querySelectorAll('.ecat').forEach(function(btn){
+  btn.onclick = function(){
+    document.querySelectorAll('.ecat').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+    currentEmojiCat = btn.getAttribute('data-cat');
+    renderEmojiPalette();
+  };
+});
+renderEmojiPalette();
 
-// Color swatches
+// ── type tabs ─────────────────────────────────────────────────
+const TYPE_ACTIVE_CLASS = {normal:'active-normal', especial_dia:'active-gold', especial_semana:'active-jade', urgente:'active-ember'};
+document.querySelectorAll('.type-tab').forEach(function(tab){
+  tab.onclick = function(){
+    document.querySelectorAll('.type-tab').forEach(function(t){ t.classList.remove('active-normal','active-gold','active-jade','active-ember'); });
+    selectedAnuncioType = tab.getAttribute('data-type');
+    tab.classList.add(TYPE_ACTIVE_CLASS[selectedAnuncioType]||'active-normal');
+    updatePreview();
+  };
+});
+
+// ── color swatches ────────────────────────────────────────────
 document.querySelectorAll('.color-swatch').forEach(function(sw){
   sw.onclick = function(){
     document.querySelectorAll('.color-swatch').forEach(function(s){ s.classList.remove('active'); });
     sw.classList.add('active');
     selectedAnuncioColor = sw.getAttribute('data-color');
+    updatePreview();
   };
 });
 
-// Upload imagen a nostr.build
+// ── image upload → nostr.build ───────────────────────────────
 document.getElementById('anuncioImg').addEventListener('change', async function(){
-  const file = this.files[0];
-  if(!file) return;
+  const file = this.files[0]; if(!file) return;
   const status = document.getElementById('anuncioImgStatus');
-  status.textContent = 'Subiendo…';
+  const thumb  = document.getElementById('anuncioImgThumb');
+  status.textContent = '↑ Subiendo…';
+  thumb.style.display='none';
   try{
-    const fd = new FormData();
-    fd.append('file', file);
-    const res = await fetch('https://nostr.build/api/v2/upload/files', { method:'POST', body: fd });
+    // preview local inmediato
+    const reader = new FileReader();
+    reader.onload = function(e){ thumb.src=e.target.result; thumb.style.display='block'; };
+    reader.readAsDataURL(file);
+    // upload
+    const fd = new FormData(); fd.append('file', file);
+    const res = await fetch('https://nostr.build/api/v2/upload/files', {method:'POST', body:fd});
     const json = await res.json();
-    uploadedImageUrl = json.data && json.data[0] && (json.data[0].url || json.data[0].nip94_event && json.data[0].nip94_event.tags.find(function(t){return t[0]==='url';})[1]);
-    status.textContent = uploadedImageUrl ? '✓ lista' : '✗ error';
-  }catch(e){ status.textContent = '✗ fallo de red'; }
+    const item = json.data && json.data[0];
+    uploadedImageUrl = item && (item.url || (item.nip94_event && (item.nip94_event.tags||[]).find(function(t){return t[0]==='url';})||['',''])[1]);
+    status.textContent = uploadedImageUrl ? '✓' : '✗ error';
+    updatePreview();
+  }catch(e){ status.textContent = '✗ red'; }
 });
 
-function renderAnuncioCard(data){
+// ── GIF picker — Tenor API (clave pública de demo) ───────────
+const TENOR_KEY = 'LIVDSRZULELA';
+let gifDebounce = null;
+
+async function fetchGifs(q){
+  try{
+    const r = await fetch('https://api.tenor.com/v1/search?q='+encodeURIComponent(q)+'&key='+TENOR_KEY+'&limit=12&media_filter=minimal&contentfilter=medium');
+    const j = await r.json();
+    return (j.results||[]).map(function(item){
+      const m = item.media && item.media[0];
+      return m && (m.tinygif||m.gif) && (m.tinygif||m.gif).url;
+    }).filter(Boolean);
+  }catch(e){ return []; }
+}
+
+function renderGifGrid(urls){
+  const grid = document.getElementById('gifGrid');
+  if(!urls.length){ grid.innerHTML='<div style="font-size:.78rem;color:rgba(255,255,255,.35);padding:8px">Sin resultados.</div>'; return; }
+  grid.innerHTML = urls.map(function(url){
+    return '<div class="gif-item"><img loading="lazy" src="'+escapeHtml(url)+'" alt=""></div>';
+  }).join('');
+  grid.querySelectorAll('.gif-item').forEach(function(el, i){
+    el.onclick = function(){
+      selectedGifUrl = urls[i];
+      document.getElementById('gifPreviewThumb').src = selectedGifUrl;
+      document.getElementById('gifPreviewRow').style.display = 'flex';
+      document.getElementById('gifPicker').style.display = 'none';
+      document.getElementById('gifToggleBtn').style.display = 'none';
+      updatePreview();
+    };
+  });
+}
+
+document.getElementById('gifToggleBtn').onclick = function(){
+  const p = document.getElementById('gifPicker');
+  const open = p.style.display === 'block';
+  p.style.display = open ? 'none' : 'block';
+  if(!open){
+    const active = document.querySelector('.gif-cat-btn.active');
+    const q = active ? active.getAttribute('data-q') : 'psychedelic';
+    document.getElementById('gifGrid').innerHTML = '<div style="font-size:.78rem;color:rgba(255,255,255,.35);padding:8px">Cargando…</div>';
+    fetchGifs(q).then(renderGifGrid);
+  }
+};
+
+document.querySelectorAll('.gif-cat-btn').forEach(function(btn){
+  btn.onclick = function(){
+    document.querySelectorAll('.gif-cat-btn').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+    document.getElementById('gifSearchInput').value = '';
+    document.getElementById('gifGrid').innerHTML = '<div style="font-size:.78rem;color:rgba(255,255,255,.35);padding:8px">Cargando…</div>';
+    fetchGifs(btn.getAttribute('data-q')).then(renderGifGrid);
+  };
+});
+
+document.getElementById('gifSearchInput').addEventListener('input', function(){
+  const q = this.value.trim(); if(!q) return;
+  clearTimeout(gifDebounce);
+  gifDebounce = setTimeout(function(){
+    document.getElementById('gifGrid').innerHTML = '<div style="font-size:.78rem;color:rgba(255,255,255,.35);padding:8px">Buscando…</div>';
+    fetchGifs(q).then(renderGifGrid);
+  }, 500);
+});
+
+document.getElementById('gifRemoveBtn').onclick = function(){
+  selectedGifUrl = '';
+  document.getElementById('gifPreviewRow').style.display = 'none';
+  document.getElementById('gifToggleBtn').style.display = 'block';
+  updatePreview();
+};
+
+// ── live preview ──────────────────────────────────────────────
+function updatePreview(){
+  const wrap = document.getElementById('anuncioPreviewWrap');
+  const card = document.getElementById('anuncioPreviewCard');
+  const text = document.getElementById('anuncioText').value.trim();
+  if(!text && !uploadedImageUrl && !selectedGifUrl){ wrap.style.display='none'; return; }
+  wrap.style.display = 'block';
+  card.innerHTML = buildCardHtml({type:selectedAnuncioType, text:text, color:selectedAnuncioColor, imageUrl:uploadedImageUrl, gifUrl:selectedGifUrl}, false);
+}
+document.getElementById('anuncioText').addEventListener('input', updatePreview);
+
+// ── render card HTML ──────────────────────────────────────────
+const TYPE_ORDER = {urgente:0, especial_dia:1, especial_semana:2, normal:3};
+const BADGE_LABELS = {especial_dia:'✦ Especial del Día', especial_semana:'★ Esta Semana', urgente:'⚡ URGENTE', normal:''};
+
+function buildCardHtml(data, showDel){
   const tipo = data.type || 'normal';
-  const badge = {
-    especial_dia: '✦ Especial del Día',
-    especial_semana: '★ Esta Semana',
-    urgente: '⚡ URGENTE',
-    normal: ''
-  }[tipo] || '';
-  const borderColor = data.color || '#E8A020';
-  const imgHtml = data.imageUrl ? '<img class="anuncio-img" src="'+escapeHtml(data.imageUrl)+'" loading="lazy" alt="">' : '';
-  const gifHtml = data.gifUrl ? '<img class="anuncio-img" src="'+escapeHtml(data.gifUrl)+'" loading="lazy" alt="">' : '';
-  return '<div class="anuncio-card tipo-'+escapeHtml(tipo)+'" style="border-left-color:'+escapeHtml(borderColor)+'">'
+  const badge = BADGE_LABELS[tipo] || '';
+  const bc = escapeHtml(data.color || '#E8A020');
+  const mediaHtml = data.imageUrl
+    ? '<img class="anuncio-media" src="'+escapeHtml(data.imageUrl)+'" loading="lazy" alt="">'
+    : data.gifUrl
+    ? '<img class="anuncio-media is-gif" src="'+escapeHtml(data.gifUrl)+'" loading="lazy" alt="">'
+    : '';
+  const tsHtml = data.ts ? '<span class="anuncio-ts">'+new Date(data.ts*1000).toLocaleDateString('es-EC',{weekday:'short',hour:'2-digit',minute:'2-digit'})+'</span>' : '';
+  const delHtml = showDel ? '<button class="anuncio-del" data-dtag="'+escapeHtml(data._dtag||'')+'">✕</button>' : '';
+  return '<div class="anuncio-card tipo-'+escapeHtml(tipo)+'" style="border-left-color:'+bc+'">'
+    + delHtml
     + (badge ? '<div class="anuncio-badge">'+badge+'</div>' : '')
-    + '<div class="anuncio-body">'+escapeHtml(data.text||'')+'</div>'
-    + imgHtml + gifHtml
+    + (data.text ? '<div class="anuncio-body">'+escapeHtml(data.text)+'</div>' : '')
+    + mediaHtml + tsHtml
     + '</div>';
 }
+
+// ── load anuncios from Nostr ──────────────────────────────────
+const PLACEHOLDER_HTML =
+  '<div class="anuncio-card tipo-especial_dia"><div class="anuncio-badge">✦ Especial del Día</div><div class="anuncio-body">Pregúntale a Jose — siempre hay algo. 🔥</div></div>'
++ '<div class="anuncio-card tipo-especial_semana"><div class="anuncio-badge">★ Esta Semana</div><div class="anuncio-body">El Olimpo nunca duerme. Vuelve pronto. 🚀</div></div>'
++ '<div class="anuncio-card tipo-normal"><div class="anuncio-body">📡 Anuncios en vivo — solo Jose puede publicar aquí.</div></div>';
 
 async function loadAnuncios(){
   const list = document.getElementById('anuncios-list');
   try{
     const joseClaim = await withTimeout(getCanonicalClaim('Jose'), 7000);
-    const PLACEHOLDER = '<div class="anuncio-card tipo-especial_dia"><div class="anuncio-badge">✦ Especial del Día</div><div class="anuncio-body">Pregúntale a Jose — hay sorpresas. 🔥</div></div>'
-      + '<div class="anuncio-card tipo-especial_semana"><div class="anuncio-badge">★ Esta Semana</div><div class="anuncio-body">El Olimpo nunca duerme. Vuelve pronto. 🚀</div></div>';
-    if(!joseClaim){ list.innerHTML = PLACEHOLDER; return; }
-    const events = await withTimeout(pool.querySync(RELAYS, { kinds:[30078], authors:[joseClaim.pubkey], '#t':['olimpo-anuncio'], limit:20 }), 8000);
-    events.sort(function(a,b){ return b.created_at - a.created_at; });
-    if(!events.length){ list.innerHTML = PLACEHOLDER; return; }
-    list.innerHTML = events.map(function(ev){
-      let data = {}; try{ data = JSON.parse(ev.content)||{}; }catch(e){}
-      return renderAnuncioCard(data);
+    if(!joseClaim){ list.innerHTML = PLACEHOLDER_HTML; return; }
+    const events = await withTimeout(pool.querySync(RELAYS, {kinds:[30078], authors:[joseClaim.pubkey], '#t':['olimpo-anuncio'], limit:30}), 8000);
+    const visible = events.filter(function(ev){
+      let d={}; try{d=JSON.parse(ev.content)||{};}catch(e){}
+      return !d.deleted;
+    });
+    if(!visible.length){ list.innerHTML = PLACEHOLDER_HTML; return; }
+    // sort: urgente → especial_dia → especial_semana → normal
+    visible.sort(function(a,b){
+      let da={},db={}; try{da=JSON.parse(a.content)||{};}catch(e){} try{db=JSON.parse(b.content)||{};}catch(e){}
+      const oa = TYPE_ORDER[da.type]??3, ob = TYPE_ORDER[db.type]??3;
+      return oa!==ob ? oa-ob : b.created_at-a.created_at;
+    });
+    const isJose = (me === 'Jose');
+    list.innerHTML = visible.map(function(ev){
+      let d={}; try{d=JSON.parse(ev.content)||{};}catch(e){}
+      const dTag = (ev.tags.find(function(t){return t[0]==='d';})||[])[1]||'';
+      d._dtag = dTag; d.ts = ev.created_at;
+      return buildCardHtml(d, isJose);
     }).join('');
-  }catch(e){ list.innerHTML = '<div class="anuncio-card"><div class="anuncio-body">No se pudieron cargar los especiales.</div></div>'; }
+    // borrar anuncio (solo Jose)
+    if(isJose){
+      list.querySelectorAll('.anuncio-del').forEach(function(btn){
+        btn.onclick = async function(){
+          if(!confirm('¿Eliminar este anuncio?')) return;
+          const dtag = btn.getAttribute('data-dtag');
+          const pinArr = JSON.parse(localStorage.getItem('olimpo_pin')||'null');
+          if(!pinArr) return;
+          try{
+            const sk = await deriveSecretKey('Jose', pinArr);
+            const tmpl = {kind:30078, created_at:Math.floor(Date.now()/1000), tags:[['d',dtag],['t','olimpo-anuncio']], content:JSON.stringify({deleted:true})};
+            const signed = finalizeEvent(tmpl, sk);
+            pool.publish(RELAYS, signed);
+            btn.closest('.anuncio-card').remove();
+          }catch(e){}
+        };
+      });
+    }
+  }catch(e){ list.innerHTML = PLACEHOLDER_HTML; }
 }
 loadAnuncios();
 
-// Visibilidad del panel admin — llamado desde renderBoard()
+// ── visibilidad panel admin ───────────────────────────────────
 function updateJosePanel(){
   const panel = document.getElementById('joseAdminPanel');
-  if(panel) panel.style.display = (me === 'Jose') ? 'block' : 'none';
+  if(!panel) return;
+  panel.style.display = (me === 'Jose') ? 'block' : 'none';
+  if(me === 'Jose') loadAnuncios(); // recarga con botones de borrar visibles
 }
 
-// Publicar anuncio
+// ── publicar ─────────────────────────────────────────────────
 document.getElementById('anuncioPublish').onclick = async function(){
   if(me !== 'Jose'){ alert('Solo Jose puede publicar anuncios.'); return; }
   const text = document.getElementById('anuncioText').value.trim();
-  if(!text){ alert('Escribe algo primero.'); return; }
+  if(!text && !uploadedImageUrl && !selectedGifUrl){ alert('Agrega texto, imagen o GIF.'); return; }
   const pinArr = JSON.parse(localStorage.getItem('olimpo_pin')||'null');
-  if(!pinArr){ alert('Necesitas verificar tu PIN primero.'); return; }
+  if(!pinArr){ alert('Verifica tu PIN primero tocando tu personaje.'); return; }
   const status = document.getElementById('anuncioStatus');
-  status.style.display = 'block';
-  status.textContent = 'Publicando…';
+  status.style.display = 'block'; status.textContent = '↑ Publicando…';
   try{
-    const secretKey = await deriveSecretKey('Jose', pinArr);
-    const gifUrl = document.getElementById('anuncioGif').value.trim();
-    const payload = {
-      type: document.getElementById('anuncioType').value,
-      text: text,
-      color: selectedAnuncioColor
-    };
+    const sk = await deriveSecretKey('Jose', pinArr);
+    const payload = {type:selectedAnuncioType, text:text, color:selectedAnuncioColor};
     if(uploadedImageUrl) payload.imageUrl = uploadedImageUrl;
-    if(gifUrl) payload.gifUrl = gifUrl;
-    const tmpl = {
-      kind:30078, created_at: Math.floor(Date.now()/1000),
+    if(selectedGifUrl)   payload.gifUrl   = selectedGifUrl;
+    const tmpl = {kind:30078, created_at:Math.floor(Date.now()/1000),
       tags:[['d','olimpo-anuncio-'+Date.now()],['t','olimpo-anuncio']],
-      content: JSON.stringify(payload)
-    };
-    const signed = finalizeEvent(tmpl, secretKey);
-    await withTimeout(Promise.any(pool.publish(RELAYS, signed)), 9000);
+      content:JSON.stringify(payload)};
+    await withTimeout(Promise.any(pool.publish(RELAYS, finalizeEvent(tmpl, sk))), 9000);
     status.textContent = '✓ Publicado';
+    // reset
     document.getElementById('anuncioText').value = '';
-    document.getElementById('anuncioGif').value = '';
     document.getElementById('anuncioImg').value = '';
-    uploadedImageUrl = '';
+    document.getElementById('anuncioImgThumb').style.display = 'none';
     document.getElementById('anuncioImgStatus').textContent = '';
-    setTimeout(function(){ status.style.display='none'; }, 3000);
-    setTimeout(loadAnuncios, 1500);
-  }catch(e){ status.textContent = '✗ Error al publicar. Intenta de nuevo.'; }
+    uploadedImageUrl = ''; selectedGifUrl = '';
+    document.getElementById('gifPreviewRow').style.display = 'none';
+    document.getElementById('gifToggleBtn').style.display = 'block';
+    document.getElementById('gifPicker').style.display = 'none';
+    document.getElementById('anuncioPreviewWrap').style.display = 'none';
+    setTimeout(function(){ status.style.display='none'; }, 3500);
+    setTimeout(loadAnuncios, 1800);
+  }catch(e){ status.textContent = '✗ Error de red. Intenta de nuevo.'; }
 };
 
 document.getElementById('anuncioClear').onclick = function(){
   document.getElementById('anuncioText').value = '';
-  document.getElementById('anuncioGif').value = '';
   document.getElementById('anuncioImg').value = '';
-  uploadedImageUrl = '';
+  document.getElementById('anuncioImgThumb').style.display = 'none';
   document.getElementById('anuncioImgStatus').textContent = '';
+  uploadedImageUrl = ''; selectedGifUrl = '';
+  document.getElementById('gifPreviewRow').style.display = 'none';
+  document.getElementById('gifToggleBtn').style.display = 'block';
+  document.getElementById('gifPicker').style.display = 'none';
+  document.getElementById('anuncioPreviewWrap').style.display = 'none';
   document.getElementById('anuncioStatus').style.display = 'none';
 };
 
