@@ -320,17 +320,71 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
 /* 5: último género de radio escuchado — borde atenuado + flecha de retorno */
 .radio-genre.last-played:not(.active){border-color:rgba(232,160,32,.55)}
 .radio-genre.last-played:not(.active)::after{content:'↩';font-size:.5rem;margin-left:2px;opacity:.7}
+
+/* ======================================================
+   NUEVAS FEATURES 2026-06-24 — A B C D E
+   ====================================================== */
+
+/* A: reacciones P2P — picker rápido sobre la burbuja */
+.reaction-picker{
+  position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);
+  display:flex;gap:3px;background:var(--bg);border:1px solid rgba(40,236,170,.4);
+  border-radius:10px;padding:4px 6px;z-index:12;animation:bubbleIn .15s ease-out;
+}
+.reaction-btn{
+  font-size:1.1rem;cursor:pointer;padding:2px;background:none;border:none;
+  border-radius:4px;transition:transform .1s;line-height:1;
+}
+.reaction-btn:hover{transform:scale(1.3)}
+.reaction-flash{
+  position:absolute;top:-18px;left:50%;transform:translateX(-50%);
+  font-size:1.2rem;pointer-events:none;
+  animation:reactionFly .7s ease-out forwards;
+}
+@keyframes reactionFly{
+  0%{opacity:1;transform:translateX(-50%) translateY(0)}
+  100%{opacity:0;transform:translateX(-50%) translateY(-24px)}
+}
+/* badge de reacciones acumuladas debajo del avatar */
+.char-reactions{
+  font-size:.72rem;min-height:.9rem;margin-top:1px;line-height:1;
+  letter-spacing:1px;opacity:.85;
+}
+
+/* B: eco del club — último mensaje faded tras vencer la burbuja */
+.char-echo{
+  font-size:.6rem;color:var(--text3) !important;-webkit-text-fill-color:var(--text3) !important;
+  margin-top:1px;opacity:.55;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;max-width:90px;font-style:italic;
+}
+
+/* C: sonido ambiente — botón en la radio bar */
+#radioAmbiente{border-color:rgba(40,236,170,.5);color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important}
+#radioAmbiente.active{background:rgba(40,236,170,.15);box-shadow:0 0 0 2px var(--jade) inset}
+
+/* D: sparkline 7 días — SVG en el header */
+#activitySpark{
+  position:absolute;left:16px;bottom:8px;
+  opacity:.55;pointer-events:none;
+}
+
+/* E: bienvenida personalizada — texto del boot ya es dinámico vía JS */
 </style>
 </head>
 <body>
 
 <header>
   <h1 class="wordmark-sr">Olimpo 2.0</h1>
+  <!-- D: sparkline 7 días de actividad — dibujado por JS en onSnapshot -->
+  <svg id="activitySpark" width="80" height="28" viewBox="0 0 80 28" xmlns="http://www.w3.org/2000/svg">
+    <polyline id="sparkLine" points="" fill="none" stroke="#28ECAA" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+  </svg>
   <div class="online-pill"><span class="online-dot"></span><span id="onlineLabel">llegando al club</span></div>
 </header>
 
 <div class="boot">
-  <p>La consola del club. A donde vienes cuando extrañas a tu gente del Olimpo<span class="cursor"></span></p>
+  <!-- E: texto personalizado según si el usuario ya fue al club — actualizado en JS -->
+  <p id="bootMsg">La consola del club. A donde vienes cuando extrañas a tu gente del Olimpo<span class="cursor"></span></p>
 </div>
 
 <main class="console">
@@ -438,6 +492,8 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
     <button class="radio-genre" data-genre="progressive_lounge">Lounge<span class="radio-tip">Progressive Lounge</span></button>
     <button class="radio-genre" data-genre="burning_man">Playa<span class="radio-tip">Burning Man Festival</span></button>
     <button class="radio-genre" id="radioOlimpo" disabled>DJs<span class="radio-tip">DJs Olimpo — próximamente</span></button>
+    <!-- C: sonido ambiente generativo vía Web Audio -->
+    <button class="radio-genre" id="radioAmbiente" title="Ambiente del club">〜Amb<span class="radio-tip">Sonido Ambiente</span></button>
     <button class="radio-genre" id="radioStop">■ Stop</button>
   </div>
 </div>
@@ -657,6 +713,60 @@ const app = initializeApp(firebaseConfig);
 // es un poco más lento pero confiable en todas las redes, mobile incluido.
 const db = initializeFirestore(app, { experimentalForceLongPolling: true });
 
+/* ---- E: bienvenida personalizada según historial del visitante ---- */
+(function personalizedWelcome(){
+  var bootEl = document.getElementById('bootMsg');
+  if(!bootEl) return;
+  var whoMe = localStorage.getItem('olimpo_me');
+  var lastVisitKey = 'olimpo_last_visit';
+  var lastVisit = parseInt(localStorage.getItem(lastVisitKey)||'0', 10);
+  var now = Date.now();
+  // actualizar timestamp de esta visita
+  localStorage.setItem(lastVisitKey, String(now));
+  var cursor = '<span class="cursor"></span>';
+  var msg;
+  if(!whoMe){
+    msg = 'La consola del club. A donde vienes cuando extrañas a tu gente del Olimpo' + cursor;
+  } else {
+    var sinceMs = now - lastVisit;
+    var sinceH = sinceMs / 3600000;
+    var sinceD = sinceMs / 86400000;
+    if(lastVisit === 0 || sinceH < 0.1){
+      // primera vez o regresó enseguida
+      msg = 'Bienvenido al Olimpo, <b style="color:var(--jade);-webkit-text-fill-color:var(--jade)">' + whoMe + '</b>' + cursor;
+    } else if(sinceH < 4){
+      msg = 'De vuelta, <b style="color:var(--jade);-webkit-text-fill-color:var(--jade)">' + whoMe + '</b>. ¿Qué te perdiste?' + cursor;
+    } else if(sinceD < 1){
+      msg = 'Hola de nuevo, <b style="color:var(--jade);-webkit-text-fill-color:var(--jade)">' + whoMe + '</b>. El club te esperaba' + cursor;
+    } else if(sinceD < 3){
+      var days = Math.round(sinceD);
+      msg = '<b style="color:var(--jade);-webkit-text-fill-color:var(--jade)">' + whoMe + '</b> vuelve después de ' + days + (days===1?' día':' días') + ' — el Olimpo sigue vivo' + cursor;
+    } else {
+      var daysLong = Math.round(sinceD);
+      msg = 'Largo tiempo, <b style="color:var(--jade);-webkit-text-fill-color:var(--jade)">' + whoMe + '</b>. ' + daysLong + ' días fuera — qué bueno que volviste' + cursor;
+    }
+  }
+  bootEl.innerHTML = msg;
+})();
+
+   El bug: lastSeen solo se escribía al verificar PIN → si nadie verificó en 72h,
+   visited72h quedaba en 0 y el badge siempre mostraba "llegando al club".
+   Fix: al cargar la página, si el usuario ya tiene un personaje guardado en
+   localStorage (no necesita PIN), actualizamos lastSeen silenciosamente.
+   Así el badge de tres tiers funciona aunque nadie haya verificado su PIN hoy.
+   -------------------------------------------------------------------- */
+(function softLastSeenPing(){
+  const whoMe = localStorage.getItem('olimpo_me');
+  if(!whoMe) return; // visitante anónimo, no pinguear
+  try{
+    // setDoc con merge:true — no crea el documento si no existe, y no pisa
+    // ningún campo que no mandemos. Si falla (sin red) no pasa nada.
+    import("https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js").then(function(m){
+      m.setDoc(m.doc(db,'olimpo_personajes',whoMe), { lastSeen: m.serverTimestamp() }, { merge: true }).catch(function(){});
+    }).catch(function(){});
+  }catch(e){}
+})();
+
 // Personajes de staff con activación gateada por código — no dejan crear
 // cualquier PIN libre la primera vez, hace falta el código de activación
 // (dado fuera de la app) antes de elegir el PIN definitivo. Jose = owner
@@ -711,6 +821,8 @@ let me = localStorage.getItem('olimpo_me') || null;
 let personajesData = {}; // existencia/roles, vía Firestore — solo identidad, tráfico mínimo
 let bubbles = JSON.parse(localStorage.getItem('olimpo_bubbles') || '{}'); // {nombre:{text,ts}} — vía P2P, nunca toca servidor
 function saveBubbles(){ localStorage.setItem('olimpo_bubbles', JSON.stringify(bubbles)); }
+// A: reacciones P2P — {nombre: {emoji: count}} — vive solo en memoria/P2P, no se persiste
+let reactions = {};
 // 4: typing indicator — estado P2P efímero, nunca se persiste
 let typingState = {}; // {nombre: tsLastTyping} — sólo vive en memoria
 
@@ -785,18 +897,65 @@ function renderBoard(){
       var bubbleTimeStr = '';
       if(bubbleAlive){ var bAge = Math.max(0, Math.round((Date.now()-(b.ts||0))/60000)); bubbleTimeStr = bAge < 1 ? 'ahora' : (bAge + ' min'); }
       const bubble = bubbleAlive ? '<div class="bubble">'+escapeHtml(b.text)+'<span class="bubble-ts">'+bubbleTimeStr+'</span></div>' : '';
+      // B: eco — si la burbuja venció pero hay texto guardado, muestra versión faded debajo del nombre
+      const hasEcho = b && b.text && !bubbleAlive;
+      const echoHtml = hasEcho ? '<div class="char-echo">💬 '+escapeHtml(b.text.slice(0,28))+'</div>' : '';
       const statusText = me===c.name ? 'Eres tú' : (isTyping ? '···' : 'en el club');
+      // A: badge de reacciones acumuladas
+      const rxData = reactions[c.name] || {};
+      const rxStr = Object.keys(rxData).map(function(em){ return em+(rxData[em]>1?rxData[em]:''); }).join('');
+      const rxBadge = rxStr ? '<div class="char-reactions">'+rxStr+'</div>' : '<div class="char-reactions"></div>';
       div.innerHTML =
         bubble +
         '<img class="sprite" loading="lazy" alt="'+safeName+'" src="'+avatarUrl(c)+'">' +
         '<div class="char-name">'+safeName+'</div>' +
-        '<div class="char-status">'+statusText+'</div>';
+        '<div class="char-status">'+statusText+'</div>' +
+        echoHtml +
+        rxBadge;
       // Click en tu avatar = menú de opciones (nickname, avatar, PIN, reset)
       // Click en otro avatar = entrar como ese personaje
       div.onclick = (me===c.name) ? function(){ openAvatarMenu(); } : function(){ claimOrVerify(c.name); };
       const bubbleEl = div.querySelector('.bubble');
       if(bubbleEl){
-        bubbleEl.onclick = function(e){ e.stopPropagation(); openAvatarMenu(); };
+        if(me===c.name){
+          bubbleEl.onclick = function(e){ e.stopPropagation(); openAvatarMenu(); };
+        } else {
+          // A: tap en burbuja ajena = picker de reacciones rápidas
+          bubbleEl.onclick = function(e){
+            e.stopPropagation();
+            // quitar picker previo
+            document.querySelectorAll('.reaction-picker').forEach(function(p){ p.remove(); });
+            const REACT_EMOJIS = ['❤️','🔥','😂','👏','😮','🙌'];
+            const picker = document.createElement('div');
+            picker.className = 'reaction-picker';
+            const charNameForReact = c.name;
+            REACT_EMOJIS.forEach(function(em){
+              const btn = document.createElement('button');
+              btn.className = 'reaction-btn'; btn.textContent = em; btn.type='button';
+              btn.onclick = function(ev){
+                ev.stopPropagation();
+                // acumular localmente
+                if(!reactions[charNameForReact]) reactions[charNameForReact] = {};
+                reactions[charNameForReact][em] = (reactions[charNameForReact][em]||0)+1;
+                // flash animado
+                const flash = document.createElement('span');
+                flash.className = 'reaction-flash'; flash.textContent = em;
+                div.appendChild(flash);
+                setTimeout(function(){ flash.remove(); }, 750);
+                picker.remove();
+                // difundir vía P2P
+                if(window.__sendReaction) window.__sendReaction({ target: charNameForReact, emoji: em });
+                renderBoard();
+              };
+              picker.appendChild(btn);
+            });
+            // cerrar al tocar fuera
+            setTimeout(function(){
+              document.addEventListener('click', function closeP(){ picker.remove(); document.removeEventListener('click', closeP); }, {once:true});
+            }, 10);
+            bubbleEl.appendChild(picker);
+          };
+        }
       }
       board.appendChild(div);
     }catch(e){ console.error('renderBoard: fallo en', c && c.name, e); }
@@ -1198,9 +1357,49 @@ onSnapshot(collection(db,'olimpo_personajes'), function(snap){
     if(ms >= cutoff72h) visited72h++;
     if(ms >= cutoff2h)  active2h++;
   });
-  onlineCountEl.textContent = visited72h >= 1
-    ? (visited72h + ' visitaron · ' + active2h + ' activos hoy')
-    : 'llegando al club';
+  // Badge de tres tiers — profundidad temporal sin infraestructura extra.
+  // Tier 1 (activos hoy): alguien estuvo en las últimas 2h — muestra presencia real.
+  // Tier 2 (esta semana): alguien visitó en 72h — engagement social (fix: soft ping en page load).
+  // Tier 3 (miembros totales): nadie reciente pero el club tiene historia — da contexto.
+  // Tier 0: club vacío / primer día — "llegando al club".
+  const totalMembers = Object.keys(data).length;
+  let badgeText;
+  if(active2h >= 1){
+    badgeText = visited72h + ' visitaron · ' + active2h + ' activos ahora';
+  } else if(visited72h >= 1){
+    badgeText = visited72h + ' esta semana · ' + totalMembers + ' miembros';
+  } else if(totalMembers >= 1){
+    badgeText = totalMembers + ' en el club · nadie hoy';
+  } else {
+    badgeText = 'llegando al club';
+  }
+  onlineCountEl.textContent = badgeText;
+
+  /* D: sparkline 7 días — cuenta visitas por día en la última semana.
+     Cada punto = un día (hoy a la izquierda). Solo lee lastSeen de personajesData,
+     cero queries adicionales. SVG 80×28px, polilinea en jade. */
+  (function drawSparkline(){
+    const sparkEl = document.getElementById('sparkLine');
+    if(!sparkEl) return;
+    const DAY_MS = 86400000;
+    const now = Date.now();
+    const buckets = [0,0,0,0,0,0,0]; // índice 0 = 6 días atrás, 6 = hoy
+    Object.values(data).forEach(function(d){
+      const ls = d.lastSeen;
+      const ms = ls && ls.toMillis ? ls.toMillis() : (typeof ls==='number'?ls:0);
+      const daysAgo = Math.floor((now - ms) / DAY_MS);
+      if(daysAgo >= 0 && daysAgo <= 6) buckets[6 - daysAgo]++;
+    });
+    const maxV = Math.max(1, Math.max.apply(null, buckets));
+    const W=80, H=28, PAD=3;
+    const pts = buckets.map(function(v, i){
+      const x = PAD + i * ((W - PAD*2) / 6);
+      const y = H - PAD - (v / maxV) * (H - PAD*2);
+      return x.toFixed(1) + ',' + y.toFixed(1);
+    });
+    sparkEl.setAttribute('points', pts.join(' '));
+  })();
+
   // 1: tab title dinámico — notificación pasiva para quien tiene el club en background
   document.title = active2h >= 1
     ? ('OLIMPO (' + active2h + ') — Consola del Club')
@@ -1225,6 +1424,15 @@ let sendBubble = null;
     const [sendS, getS] = room.makeAction('sync');
     // 4: typing indicator — acción efímera, sin persistencia ni servidor
     const [sendT, getT] = room.makeAction('typing');
+    // A: reacciones P2P — efímeras, solo en memoria del peer
+    const [sendR, getR] = room.makeAction('reaction');
+    window.__sendReaction = sendR;
+    getR(function(data){
+      if(!data || typeof data.target!=='string' || typeof data.emoji!=='string') return;
+      if(!reactions[data.target]) reactions[data.target] = {};
+      reactions[data.target][data.emoji] = (reactions[data.target][data.emoji]||0)+1;
+      renderBoard();
+    });
     window.__sendTyping = sendT;
     getT(function(data){
       if(!data || typeof data.name!=='string') return;
@@ -1736,11 +1944,107 @@ document.getElementById('eventos-list').innerHTML = '<div class="anuncio">Noveda
     document.querySelectorAll('.radio-genre').forEach(function(b){ b.classList.remove('active'); b.classList.remove('last-played'); });
     document.getElementById('radioTrack').textContent='';
     localStorage.removeItem('olimpo_radio_last');
+    // C: apagar también el ambiente si estaba encendido
+    stopAmbiente();
+  };
+
+  /* C: sonido ambiente generativo vía Web Audio API — sin archivos externos.
+     Tres capas: dron de bajo (80 Hz, gain suave), pad armónico (320+480 Hz,
+     osciladores en leve detune para "movimiento"), y ruido rosa filtrado
+     (hiss de sala — crea la ilusión acústica del club). Todo bajo licencia
+     cero — el audio se genera en tiempo real en el navegador, nada que descargar.
+     Funciona offline, sin CORS, sin CDN. */
+  var __ambCtx = null, __ambNodes = [], __ambActive = false;
+  function startAmbiente(){
+    if(__ambActive) return;
+    try{
+      var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      __ambCtx = ctx;
+      __ambNodes = [];
+      // 1. Dron grave — onda senoidal suave, 80 Hz, muy bajo volumen
+      var drone = ctx.createOscillator();
+      var droneG = ctx.createGain();
+      drone.type = 'sine'; drone.frequency.value = 80;
+      droneG.gain.setValueAtTime(0, ctx.currentTime);
+      droneG.gain.linearRampToValueAtTime(0.06, ctx.currentTime + 2);
+      drone.connect(droneG); droneG.connect(ctx.destination);
+      drone.start();
+      __ambNodes.push(drone, droneG);
+      // 2. Pad armónico — dos osciladores en leve detune
+      [320, 480].forEach(function(freq, i){
+        var osc = ctx.createOscillator();
+        var g = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq + (i===0 ? -1.5 : 1.5); // detune sutil
+        g.gain.setValueAtTime(0, ctx.currentTime);
+        g.gain.linearRampToValueAtTime(0.025, ctx.currentTime + 3 + i);
+        osc.connect(g); g.connect(ctx.destination);
+        osc.start();
+        __ambNodes.push(osc, g);
+      });
+      // 3. Ruido rosa filtrado — hiss de sala
+      var bufLen = ctx.sampleRate * 2;
+      var noiseBuffer = ctx.createBuffer(1, bufLen, ctx.sampleRate);
+      var data = noiseBuffer.getChannelData(0);
+      // algoritmo de ruido rosa (Paul Kellet)
+      var b = [0,0,0,0,0,0,0];
+      for(var i=0;i<bufLen;i++){
+        var w = Math.random()*2-1;
+        b[0]=0.99886*b[0]+w*0.0555179; b[1]=0.99332*b[1]+w*0.0750759;
+        b[2]=0.96900*b[2]+w*0.1538520; b[3]=0.86650*b[3]+w*0.3104856;
+        b[4]=0.55000*b[4]+w*0.5329522; b[5]=-0.7616*b[5]-w*0.0168980;
+        data[i]=(b[0]+b[1]+b[2]+b[3]+b[4]+b[5]+b[6]+w*0.5362)*0.11;
+        b[6]=w*0.115926;
+      }
+      var noiseSource = ctx.createBufferSource();
+      noiseSource.buffer = noiseBuffer; noiseSource.loop = true;
+      var bpf = ctx.createBiquadFilter();
+      bpf.type = 'bandpass'; bpf.frequency.value = 600; bpf.Q.value = 0.4;
+      var noiseG = ctx.createGain();
+      noiseG.gain.setValueAtTime(0, ctx.currentTime);
+      noiseG.gain.linearRampToValueAtTime(0.04, ctx.currentTime + 1.5);
+      noiseSource.connect(bpf); bpf.connect(noiseG); noiseG.connect(ctx.destination);
+      noiseSource.start();
+      __ambNodes.push(noiseSource, noiseG, bpf);
+      __ambActive = true;
+      document.getElementById('radioAmbiente').classList.add('active');
+      document.getElementById('radioTrack').textContent = '〜 Ambiente del club';
+    }catch(e){ document.getElementById('radioTrack').textContent = 'Sin soporte de audio'; }
+  }
+  function stopAmbiente(){
+    if(!__ambActive) return;
+    try{
+      if(__ambCtx){
+        var fadeG = __ambCtx.createGain();
+        fadeG.gain.setValueAtTime(1, __ambCtx.currentTime);
+        fadeG.gain.linearRampToValueAtTime(0, __ambCtx.currentTime + 1.2);
+        // simplemente cerrar el contexto tras el fade
+        setTimeout(function(){ try{ __ambCtx.close(); }catch(e){} __ambCtx=null; }, 1400);
+      }
+    }catch(e){}
+    __ambNodes=[]; __ambActive=false;
+    var ambBtn = document.getElementById('radioAmbiente');
+    if(ambBtn) ambBtn.classList.remove('active');
+  }
+  document.getElementById('radioAmbiente').onclick = function(){
+    if(__ambActive){
+      stopAmbiente();
+      document.getElementById('radioTrack').textContent='';
+      localStorage.removeItem('olimpo_radio_last');
+    } else {
+      // apagar cualquier radio stream antes de encender ambiente
+      var player=document.getElementById('radioAudio');
+      player.onerror=null; player.pause(); player.removeAttribute('src'); player.load();
+      document.querySelectorAll('.radio-genre[data-genre]').forEach(function(b){ b.classList.remove('active'); b.classList.remove('last-played'); });
+      startAmbiente();
+      localStorage.setItem('olimpo_radio_last', '__ambiente__');
+    }
   };
   // 5: restaurar indicador visual del último género al volver a la página (sin autoplay)
   (function(){
     var lg = localStorage.getItem('olimpo_radio_last');
     if(!lg) return;
+    if(lg === '__ambiente__') return; // ambiente no se restaura en silencio (requiere gesto del usuario)
     var lb = document.querySelector('.radio-genre[data-genre="'+lg+'"]');
     if(lb) lb.classList.add('last-played');
   })();
