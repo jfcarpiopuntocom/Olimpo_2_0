@@ -75,7 +75,7 @@ header{
     var(--bg2);
   border-bottom:2px solid var(--gold);
   padding:6px 16px;
-  min-height:clamp(84px, 14vw, 260px);
+  min-height:clamp(84px, 10vw, 148px);
   display:flex;align-items:center;justify-content:flex-end;
   animation: olimpoPulse 2.4s ease-in-out infinite;
 }
@@ -423,8 +423,8 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
 
   <div class="panel club-main" id="tablero-panel">
     <div class="tablero-head">
-      <div class="panel-title" style="margin-bottom:0">Tablero · ¿Quién eres?</div>
-      <div class="whoami" id="whoami">Toca tu personaje para tomar el control.</div>
+      <div class="panel-title" style="margin-bottom:0" id="tableroTitle">Tablero · ¿Quién eres?</div>
+      <div class="whoami" id="whoami">Toca un personaje para entrar al club.</div>
     </div>
     <div class="board" id="board"></div>
     <div class="msg-form" style="margin-top:14px">
@@ -1008,8 +1008,13 @@ function renderBoard(){
   newDiv.onclick = function(){ openNickModal(); };
   board.appendChild(newDiv);
 
+  const titleEl = document.getElementById('tableroTitle');
   if(me){
-    whoami.innerHTML = 'Estás jugando como <b>'+escapeHtml(me)+'</b>.';
+    if(titleEl) titleEl.innerHTML = 'Tablero · Hola, <b style="color:var(--jade);-webkit-text-fill-color:var(--jade)">'+escapeHtml(me)+'</b>';
+    whoami.style.display = 'none';
+  } else {
+    if(titleEl) titleEl.textContent = 'Tablero · ¿Quién eres?';
+    whoami.style.display = '';
   }
   if(typeof updateJosePanel === 'function') updateJosePanel();
 }
@@ -1398,13 +1403,12 @@ onSnapshot(collection(db,'olimpo_personajes'), function(snap){
     if(ms >= cutoff72h) visited72h++;
     if(ms >= cutoff4h)  active4h++;
   });
-  // Badge: visited72h = miembros activos esta semana · active4h = asomaron hoy (ventana 4h)
-  const totalMembers = Object.keys(data).length;
   let badgeText;
   if(visited72h >= 1){
-    badgeText = visited72h + ' miembros activos · ' + active4h + ' asomaron hoy';
+    badgeText = visited72h + ' esta semana' + (active4h >= 1 ? ' · ' + active4h + ' ahora' : '');
   } else {
-    badgeText = 'llegando al club';
+    const localMe = localStorage.getItem('olimpo_me');
+    badgeText = localMe ? '1 ahora' : 'llegando al club';
   }
   onlineCountEl.textContent = badgeText;
 
@@ -1888,10 +1892,12 @@ async function loadAnuncios(){
   const list = document.getElementById('anuncios-list');
   try{
     const joseClaim = await withTimeout(getCanonicalClaim('Jose'), 7000);
-    if(!joseClaim){ list.innerHTML = '<div class="anuncio-card"><div class="anuncio-body">Sin especiales por ahora.</div></div>'; return; }
+    const PLACEHOLDER = '<div class="anuncio-card tipo-especial_dia"><div class="anuncio-badge">✦ Especial del Día</div><div class="anuncio-body">Pregúntale a Jose — hay sorpresas. 🔥</div></div>'
+      + '<div class="anuncio-card tipo-especial_semana"><div class="anuncio-badge">★ Esta Semana</div><div class="anuncio-body">El Olimpo nunca duerme. Vuelve pronto. 🚀</div></div>';
+    if(!joseClaim){ list.innerHTML = PLACEHOLDER; return; }
     const events = await withTimeout(pool.querySync(RELAYS, { kinds:[30078], authors:[joseClaim.pubkey], '#t':['olimpo-anuncio'], limit:20 }), 8000);
     events.sort(function(a,b){ return b.created_at - a.created_at; });
-    if(!events.length){ list.innerHTML = '<div class="anuncio-card"><div class="anuncio-body">Próximamente especiales del Mostrador.</div></div>'; return; }
+    if(!events.length){ list.innerHTML = PLACEHOLDER; return; }
     list.innerHTML = events.map(function(ev){
       let data = {}; try{ data = JSON.parse(ev.content)||{}; }catch(e){}
       return renderAnuncioCard(data);
