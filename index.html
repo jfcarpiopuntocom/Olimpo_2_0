@@ -76,7 +76,7 @@ header{
     var(--bg2);
   border-bottom:2px solid var(--gold);
   padding:6px 16px;
-  min-height:clamp(84px, 11vw, 240px);
+  min-height:clamp(84px, 14vw, 260px);
   display:flex;align-items:center;justify-content:flex-end;
   animation: olimpoPulse 2.4s ease-in-out infinite;
 }
@@ -203,6 +203,35 @@ main.console{max-width:1280px;margin:0 auto;padding:14px;display:flex;flex-direc
 .trust-text:last-child{margin-bottom:0}
 .trust-text b{color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important}
 
+/* ---- anuncios world-class ---- */
+.anuncio-card{border-left:4px solid var(--gold);padding:10px 14px;margin-bottom:10px;border-radius:0 8px 8px 0;background:rgba(232,160,32,.05)}
+.anuncio-card .anuncio-body{font-size:.9rem;color:#FFFFFF !important;-webkit-text-fill-color:#FFFFFF !important;line-height:1.45}
+.anuncio-card .anuncio-badge{display:inline-block;font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:12px;margin-bottom:6px}
+.anuncio-card .anuncio-img{max-width:100%;border-radius:8px;margin-top:8px;display:block}
+.anuncio-card.tipo-especial_dia{border-left-color:var(--gold)}
+.anuncio-card.tipo-especial_dia .anuncio-badge{background:var(--gold);color:#0B0A12 !important;-webkit-text-fill-color:#0B0A12 !important}
+.anuncio-card.tipo-especial_semana{border-left-color:var(--jade)}
+.anuncio-card.tipo-especial_semana .anuncio-badge{background:var(--jade);color:#0B0A12 !important;-webkit-text-fill-color:#0B0A12 !important}
+.anuncio-card.tipo-urgente{border-left-color:var(--ember);border:2px solid var(--ember);background:rgba(232,96,64,.1);animation:urgentePulse 1.4s ease-in-out infinite}
+.anuncio-card.tipo-urgente .anuncio-badge{background:var(--ember);color:#FFFFFF !important;-webkit-text-fill-color:#FFFFFF !important}
+@keyframes urgentePulse{0%,100%{box-shadow:0 0 0 0 rgba(232,96,64,0)}50%{box-shadow:0 0 12px 2px rgba(232,96,64,.45)}}
+@media(prefers-reduced-motion:reduce){.anuncio-card.tipo-urgente{animation:none}}
+
+/* ---- Jose admin panel ---- */
+#joseAdminPanel{display:none;margin-top:14px;padding-top:12px;border-top:1px solid rgba(232,160,32,.3)}
+.admin-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.admin-row label{font-size:.78rem;color:var(--text2) !important;-webkit-text-fill-color:var(--text2) !important;white-space:nowrap;min-width:52px}
+.admin-row input[type=text]{flex:1;min-width:0}
+#anuncioText{width:100%;resize:vertical;min-height:56px;margin-bottom:8px;background:var(--bg3);color:#FFFFFF !important;-webkit-text-fill-color:#FFFFFF !important;border:1px solid rgba(255,255,255,.15);border-radius:6px;padding:7px 10px;font-family:inherit;font-size:.88rem;box-sizing:border-box}
+.emoji-palette{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;padding:6px;background:var(--bg3);border-radius:8px}
+.emoji-btn{font-size:1.25rem;cursor:pointer;padding:2px 4px;border-radius:4px;background:none;border:none;line-height:1;transition:transform .1s}
+.emoji-btn:hover{transform:scale(1.3)}
+.color-swatches{display:flex;gap:6px;flex-wrap:wrap}
+.color-swatch{width:22px;height:22px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0}
+.color-swatch.active{border-color:#FFFFFF;transform:scale(1.15)}
+#anuncioImgStatus{color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important;font-size:.78rem}
+.anuncio-type-sel{background:var(--bg3);color:#FFFFFF !important;border:1px solid rgba(255,255,255,.15);border-radius:6px;padding:5px 8px;font-size:.85rem;width:100%}
+
 /* ---- radio ---- */
 .radio-bar{
   position:fixed;bottom:0;left:0;right:0;z-index:95;
@@ -301,8 +330,47 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
 
     <div class="panel" id="mostrador-panel">
       <div class="panel-title">El Mostrador</div>
-      <div id="anuncios-list"><div class="anuncio">Cargando especiales…</div></div>
-      <p class="hint">Atiende Jose. Pronto: chatbot 24/7 aquí mismo para pedidos y preguntas.</p>
+      <div id="anuncios-list"><div class="anuncio-card">Cargando especiales…</div></div>
+
+      <!-- Panel admin — solo visible cuando me === 'Jose' -->
+      <div id="joseAdminPanel">
+        <div class="panel-title" style="margin-bottom:8px">📡 Publicar Anuncio</div>
+        <select id="anuncioType" class="anuncio-type-sel" style="margin-bottom:8px">
+          <option value="normal">Normal</option>
+          <option value="especial_dia">✦ Especial del Día</option>
+          <option value="especial_semana">★ Especial de la Semana</option>
+          <option value="urgente">⚡ URGENTE</option>
+        </select>
+        <textarea id="anuncioText" placeholder="Texto del anuncio…" maxlength="300"></textarea>
+        <div class="emoji-palette" id="emojiPalette"></div>
+        <div class="admin-row">
+          <label>Color:</label>
+          <div class="color-swatches" id="colorSwatches">
+            <button class="color-swatch active" data-color="#E8A020" style="background:#E8A020"></button>
+            <button class="color-swatch" data-color="#28ECAA" style="background:#28ECAA"></button>
+            <button class="color-swatch" data-color="#E86040" style="background:#E86040"></button>
+            <button class="color-swatch" data-color="#CC44FF" style="background:#CC44FF"></button>
+            <button class="color-swatch" data-color="#44CCFF" style="background:#44CCFF"></button>
+            <button class="color-swatch" data-color="#FF44AA" style="background:#FF44AA"></button>
+          </div>
+        </div>
+        <div class="admin-row">
+          <label>Imagen:</label>
+          <input type="file" id="anuncioImg" accept="image/*" style="flex:1;font-size:.78rem">
+          <span id="anuncioImgStatus"></span>
+        </div>
+        <div class="admin-row">
+          <label>GIF URL:</label>
+          <input type="text" id="anuncioGif" placeholder="https://media.giphy.com/…">
+        </div>
+        <div style="display:flex;gap:8px;margin-top:4px">
+          <button class="btn" id="anuncioPublish" style="flex:1">Publicar</button>
+          <button class="btn" id="anuncioClear" style="background:rgba(255,255,255,.1)">Limpiar</button>
+        </div>
+        <p id="anuncioStatus" class="hint" style="margin-top:6px;color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important;display:none"></p>
+      </div>
+
+      <p class="hint" style="margin-top:10px">Atiende Jose. Pronto: chatbot 24/7 aquí mismo para pedidos y preguntas.</p>
       <div class="msg-form" style="margin-top:14px">
         <input id="dmInput" type="text" maxlength="300" placeholder="Escríbele en privado al Mostrador…">
         <button class="btn" id="dmSend">Enviar</button>
@@ -444,17 +512,12 @@ try {
 
 <script type="module">
 /* ============================================================
-   Olimpo — tablero vivo + PIN de 3 símbolos vía Firebase Firestore
-   (solo identidad: el hash del PIN, tráfico mínimo, colecciones con
-   prefijo olimpo_, ver firebase-config.js y firestore.rules) +
-   burbujas de diálogo vía Trystero/Nostr P2P (sin servidor — cada
-   mensaje viaja directo entre dispositivos conectados y se cachea
-   solo localmente, fragmentado, nadie tiene el historial completo).
-   Avatares: DiceBear "bottts-neutral" (robots, sin caras de muñeco),
-   gafas/visores fijados a variantes serias ("rave anonymous").
-   Jose (admin del tablero) entra con un código de activación
-   inicial y de inmediato elige su PIN definitivo — el código de
-   activación deja de servir en cuanto lo hace.
+   Olimpo — tablero vivo en Nostr. Identidad: llaves secp256k1
+   (las mismas de Bitcoin) derivadas de tu PIN de 3 símbolos.
+   Chat: burbujas P2P vía WebRTC (Trystero/Nostr) — sin servidor,
+   fragmentado entre los conectados ahora mismo + backfill desde
+   relés para quien llega tarde. Mensajes privados: NIP-04 E2E.
+   Ningún servidor central guarda tu PIN ni el historial completo.
    ============================================================ */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import {
@@ -467,9 +530,7 @@ import { getPublicKey, finalizeEvent, SimplePool, nip04 } from "https://esm.sh/n
 // (nunca se transmite ni se guarda, solo vive en tu sesión mientras la usas).
 // El "dueño" de un personaje es quien firmó el primer evento de claim visto
 // en los relés — verificable por cualquiera, sin pedirle permiso a nadie.
-// Firebase queda como espejo de cortesía/redundancia (best-effort, nunca
-// bloquea ni es la fuente de verdad) tal como se pidió: "cositas en Firebase
-// sin problema, por redundancia" — el dato que manda es Nostr.
+// El dato que manda es Nostr — la identidad es la llave, no el servidor.
 const RELAYS = ['wss://relay.damus.io','wss://nos.lol','wss://relay.nostr.band','wss://relay.snort.social'];
 const pool = new SimplePool();
 async function deriveSecretKey(name, digits){
@@ -517,9 +578,8 @@ async function getCanonicalClaim(name){
   return { pubkey: current.pubkey, role: content.role, avatar: content.avatar };
 }
 
-// El avatar/rol que se MUESTRA viene de Nostr (tu emoji/PIN), no del espejo
-// de Firebase — Firebase puede fallar (reglas sin actualizar) y el avatar
-// debe "pegar" igual, porque la fuente real es tu llave. Se sincroniza en
+// El avatar/rol que se MUESTRA viene de Nostr — la fuente real es tu llave.
+// Se sincroniza en
 // lote (un solo viaje a los relés para todos los personajes conocidos) al
 // cargar la página y cada vez que aparece un personaje nuevo en el tablero.
 // Anti-race: cuando publicamos un cambio local (avatar/role/apodo) guardamos
@@ -662,7 +722,8 @@ function seedNum(name){
   return h;
 }
 function avatarUrl(c){
-  const chosen = personajesData[c.name] && personajesData[c.name].avatar;
+  const chosen = (personajesData[c.name] && personajesData[c.name].avatar)
+    || localStorage.getItem('olimpo_avatar_'+c.name);
   const pool = avatarsFor(c.name);
   const f = (chosen && pool.indexOf(chosen)!==-1) ? chosen
     : FOUNDER_AVATAR[c.name] || HUMAN_AVATARS[seedNum(c.name) % HUMAN_AVATARS.length];
@@ -720,6 +781,7 @@ function renderBoard(){
   if(me){
     whoami.innerHTML = 'Estás jugando como <b>'+escapeHtml(me)+'</b>.';
   }
+  if(typeof updateJosePanel === 'function') updateJosePanel();
 }
 renderBoard();
 
@@ -1023,13 +1085,16 @@ document.getElementById('pinConfirm').onclick = async function(){
       const signed = finalizeEvent(tmpl, secretKey);
       await withTimeout(Promise.any(pool.publish(RELAYS, signed)), 9000); // basta con que UN relé lo acepte
       recordLocalWrite(pendingName, tmpl.created_at);
+<<<<<<< HEAD
       // espejo de cortesía en Firebase — best-effort, nunca bloquea ni decide nada;
       // solo sirve para que el tablero pueda listar nicknames sin tener que
       // adivinarlos buscando en relés. Si falla, no pasa nada.
+=======
+      // cache de presencia — best-effort, nunca bloquea, Nostr es la fuente de verdad.
+>>>>>>> 38f5e77 (Pulso 3s, header fix, avatares persistent, Anuncios Nostr (Jose panel), Firebase refs fuera)
       setDoc(doc(db,'olimpo_personajes',pendingName), { pubkey: myPubkey, role: role, avatar: avatar, lastSeen: serverTimestamp() }).catch(function(){});
-      // No esperamos a Firebase ni a un nuevo viaje a los relés para reflejarlo
-      // — ya sabemos lo que acabamos de publicar en Nostr, se pega de una vez.
       personajesData[pendingName] = Object.assign({}, personajesData[pendingName], { pubkey: myPubkey, role: role, avatar: avatar });
+      localStorage.setItem('olimpo_avatar_'+pendingName, avatar);
 
       var codigo = picked.join('-');
       var wasStaffSetup = !!pendingStaffRole;
@@ -1063,6 +1128,7 @@ document.getElementById('pinConfirm').onclick = async function(){
         recordLocalWrite(pendingName, tmpl2.created_at);
         setDoc(doc(db,'olimpo_personajes',pendingName), { pubkey: myPubkey, role: role, avatar: selectedAvatar, lastSeen: serverTimestamp() }).catch(function(){});
         personajesData[pendingName] = Object.assign({}, personajesData[pendingName], { pubkey: myPubkey, role: role, avatar: selectedAvatar });
+        localStorage.setItem('olimpo_avatar_'+pendingName, selectedAvatar);
       } else {
         setDoc(doc(db,'olimpo_personajes',pendingName), { pubkey: myPubkey, role: role, lastSeen: serverTimestamp() }).catch(function(){});
       }
@@ -1077,9 +1143,7 @@ document.getElementById('pinConfirm').onclick = async function(){
   }
 };
 
-/* ---- personajes en vivo (solo identidad): alimenta el conteo y los avatares
-   extra de nicknames. Firestore aquí solo guarda quién existe y su hash de
-   PIN — tráfico mínimo, ningún mensaje pasa por aquí. ---- */
+/* ---- presencia en vivo: alimenta el conteo "en el club" y la lista de avatares. ---- */
 onSnapshot(collection(db,'olimpo_personajes'), function(snap){
   const data = {};
   snap.forEach(function(d){ data[d.id] = d.data(); });
@@ -1097,9 +1161,7 @@ onSnapshot(collection(db,'olimpo_personajes'), function(snap){
   onlineCountEl.textContent = active >= 1 ? (active + ' en el club') : 'llegando al club';
   renderBoard();
   loadDmInbox();
-  // Nostr (tu llave/emoji) manda sobre el espejo de Firebase, siempre — el
-  // espejo puede llegar con avatar/rol viejo o faltante y no debe pisar lo
-  // real. Se re-sincroniza cada vez que Firebase trae datos nuevos.
+  // Nostr siempre manda — re-sincroniza avatares cada vez que hay datos nuevos.
   const allNames = CHARS.map(function(c){ return c.name; }).concat(Object.keys(data));
   syncAvatarsFromNostr(Array.from(new Set(allNames)));
 });
@@ -1208,7 +1270,7 @@ syncAvatarsFromNostr(CHARS.map(function(c){ return c.name; }));
 
 // re-dibuja cada 15s solo para que las burbujas vencidas (2 min) desaparezcan
 // solas, sin esperar a que llegue un mensaje nuevo u otro evento.
-setInterval(renderBoard, 15000);
+setInterval(renderBoard, 3000);
 
 /* ---- menú de avatar: abre al hacer click en tu personaje.
    Muestra últimos 50 mensajes del club + opciones de config:
@@ -1374,21 +1436,145 @@ async function loadDmInbox(){
   }catch(e){}
 }
 
-/* ---- mostrador (especiales) + eventos y anuncios (novedades) — mismo ofertas.json ---- */
-fetch('ofertas.json').then(function(r){return r.json()}).then(function(d){
-  document.getElementById('anuncios-list').innerHTML =
-    '<div class="anuncio"><b>Hoy:</b> '+d.especial_del_dia+'</div>' +
-    '<div class="anuncio"><b>Esta semana:</b> '+d.especial_de_la_semana+'</div>';
-  const eventos = document.getElementById('eventos-list');
-  if(d.novedades && d.novedades.length){
-    eventos.innerHTML = d.novedades.map(function(n){ return '<div class="anuncio">'+n+'</div>'; }).join('');
-  } else {
-    eventos.innerHTML = '<div class="anuncio">Sin novedades por ahora.</div>';
-  }
-}).catch(function(){
-  document.getElementById('anuncios-list').innerHTML = '<div class="anuncio">No se pudieron cargar los especiales.</div>';
-  document.getElementById('eventos-list').innerHTML = '<div class="anuncio">No se pudieron cargar los anuncios.</div>';
+/* ---- Anuncios del Mostrador — 100% Nostr, publicados por Jose ---- */
+const EMOJIS_PALETTE = ['🚀','🌌','🪐','💫','🔮','🌀','🍄','🌿','🦋','⚡','🔥','👾','🛸','🎭','🌊','✨','🤖','🎆','🌈','🔴','🟣','🟢','🔵','🎯','🧬','🌀','🫧','🪬','🧿','🎪'];
+
+let selectedAnuncioColor = '#E8A020';
+let uploadedImageUrl = '';
+
+// Inicializa la paleta de emojis del panel Jose
+(function initEmojiPalette(){
+  const pal = document.getElementById('emojiPalette');
+  if(!pal) return;
+  EMOJIS_PALETTE.forEach(function(em){
+    const btn = document.createElement('button');
+    btn.className = 'emoji-btn';
+    btn.textContent = em;
+    btn.onclick = function(){
+      const t = document.getElementById('anuncioText');
+      const pos = t.selectionStart;
+      t.value = t.value.slice(0,pos) + em + t.value.slice(t.selectionEnd);
+      t.setSelectionRange(pos+em.length, pos+em.length);
+      t.focus();
+    };
+    pal.appendChild(btn);
+  });
+})();
+
+// Color swatches
+document.querySelectorAll('.color-swatch').forEach(function(sw){
+  sw.onclick = function(){
+    document.querySelectorAll('.color-swatch').forEach(function(s){ s.classList.remove('active'); });
+    sw.classList.add('active');
+    selectedAnuncioColor = sw.getAttribute('data-color');
+  };
 });
+
+// Upload imagen a nostr.build
+document.getElementById('anuncioImg').addEventListener('change', async function(){
+  const file = this.files[0];
+  if(!file) return;
+  const status = document.getElementById('anuncioImgStatus');
+  status.textContent = 'Subiendo…';
+  try{
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await fetch('https://nostr.build/api/v2/upload/files', { method:'POST', body: fd });
+    const json = await res.json();
+    uploadedImageUrl = json.data && json.data[0] && (json.data[0].url || json.data[0].nip94_event && json.data[0].nip94_event.tags.find(function(t){return t[0]==='url';})[1]);
+    status.textContent = uploadedImageUrl ? '✓ lista' : '✗ error';
+  }catch(e){ status.textContent = '✗ fallo de red'; }
+});
+
+function renderAnuncioCard(data){
+  const tipo = data.type || 'normal';
+  const badge = {
+    especial_dia: '✦ Especial del Día',
+    especial_semana: '★ Esta Semana',
+    urgente: '⚡ URGENTE',
+    normal: ''
+  }[tipo] || '';
+  const borderColor = data.color || '#E8A020';
+  const imgHtml = data.imageUrl ? '<img class="anuncio-img" src="'+escapeHtml(data.imageUrl)+'" loading="lazy" alt="">' : '';
+  const gifHtml = data.gifUrl ? '<img class="anuncio-img" src="'+escapeHtml(data.gifUrl)+'" loading="lazy" alt="">' : '';
+  return '<div class="anuncio-card tipo-'+escapeHtml(tipo)+'" style="border-left-color:'+escapeHtml(borderColor)+'">'
+    + (badge ? '<div class="anuncio-badge">'+badge+'</div>' : '')
+    + '<div class="anuncio-body">'+escapeHtml(data.text||'')+'</div>'
+    + imgHtml + gifHtml
+    + '</div>';
+}
+
+async function loadAnuncios(){
+  const list = document.getElementById('anuncios-list');
+  try{
+    const joseClaim = await withTimeout(getCanonicalClaim('Jose'), 7000);
+    if(!joseClaim){ list.innerHTML = '<div class="anuncio-card"><div class="anuncio-body">Sin especiales por ahora.</div></div>'; return; }
+    const events = await withTimeout(pool.querySync(RELAYS, { kinds:[30078], authors:[joseClaim.pubkey], '#t':['olimpo-anuncio'], limit:20 }), 8000);
+    events.sort(function(a,b){ return b.created_at - a.created_at; });
+    if(!events.length){ list.innerHTML = '<div class="anuncio-card"><div class="anuncio-body">Próximamente especiales del Mostrador.</div></div>'; return; }
+    list.innerHTML = events.map(function(ev){
+      let data = {}; try{ data = JSON.parse(ev.content)||{}; }catch(e){}
+      return renderAnuncioCard(data);
+    }).join('');
+  }catch(e){ list.innerHTML = '<div class="anuncio-card"><div class="anuncio-body">No se pudieron cargar los especiales.</div></div>'; }
+}
+loadAnuncios();
+
+// Visibilidad del panel admin — llamado desde renderBoard()
+function updateJosePanel(){
+  const panel = document.getElementById('joseAdminPanel');
+  if(panel) panel.style.display = (me === 'Jose') ? 'block' : 'none';
+}
+
+// Publicar anuncio
+document.getElementById('anuncioPublish').onclick = async function(){
+  if(me !== 'Jose'){ alert('Solo Jose puede publicar anuncios.'); return; }
+  const text = document.getElementById('anuncioText').value.trim();
+  if(!text){ alert('Escribe algo primero.'); return; }
+  const pinArr = JSON.parse(localStorage.getItem('olimpo_pin')||'null');
+  if(!pinArr){ alert('Necesitas verificar tu PIN primero.'); return; }
+  const status = document.getElementById('anuncioStatus');
+  status.style.display = 'block';
+  status.textContent = 'Publicando…';
+  try{
+    const secretKey = await deriveSecretKey('Jose', pinArr);
+    const gifUrl = document.getElementById('anuncioGif').value.trim();
+    const payload = {
+      type: document.getElementById('anuncioType').value,
+      text: text,
+      color: selectedAnuncioColor
+    };
+    if(uploadedImageUrl) payload.imageUrl = uploadedImageUrl;
+    if(gifUrl) payload.gifUrl = gifUrl;
+    const tmpl = {
+      kind:30078, created_at: Math.floor(Date.now()/1000),
+      tags:[['d','olimpo-anuncio-'+Date.now()],['t','olimpo-anuncio']],
+      content: JSON.stringify(payload)
+    };
+    const signed = finalizeEvent(tmpl, secretKey);
+    await withTimeout(Promise.any(pool.publish(RELAYS, signed)), 9000);
+    status.textContent = '✓ Publicado';
+    document.getElementById('anuncioText').value = '';
+    document.getElementById('anuncioGif').value = '';
+    document.getElementById('anuncioImg').value = '';
+    uploadedImageUrl = '';
+    document.getElementById('anuncioImgStatus').textContent = '';
+    setTimeout(function(){ status.style.display='none'; }, 3000);
+    setTimeout(loadAnuncios, 1500);
+  }catch(e){ status.textContent = '✗ Error al publicar. Intenta de nuevo.'; }
+};
+
+document.getElementById('anuncioClear').onclick = function(){
+  document.getElementById('anuncioText').value = '';
+  document.getElementById('anuncioGif').value = '';
+  document.getElementById('anuncioImg').value = '';
+  uploadedImageUrl = '';
+  document.getElementById('anuncioImgStatus').textContent = '';
+  document.getElementById('anuncioStatus').style.display = 'none';
+};
+
+// Eventos del club (panel separado)
+document.getElementById('eventos-list').innerHTML = '<div class="anuncio">Novedades próximamente.</div>';
 </script>
 
 <script>
