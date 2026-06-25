@@ -781,22 +781,12 @@ const db = initializeFirestore(app, { experimentalForceLongPolling: true });
   bootEl.innerHTML = msg;
 })();
 
-   El bug: lastSeen solo se escribía al verificar PIN → si nadie verificó en 72h,
-   visited72h quedaba en 0 y el badge siempre mostraba "llegando al club".
-   Fix: al cargar la página, si el usuario ya tiene un personaje guardado en
-   localStorage (no necesita PIN), actualizamos lastSeen silenciosamente.
-   Así el badge de tres tiers funciona aunque nadie haya verificado su PIN hoy.
-   -------------------------------------------------------------------- */
+/* soft lastSeen ping en page load — usa db y serverTimestamp ya importados.
+   Sin esto, visited72h era 0 si nadie verificó PIN esa semana → "llegando al club" siempre. */
 (function softLastSeenPing(){
   const whoMe = localStorage.getItem('olimpo_me');
-  if(!whoMe) return; // visitante anónimo, no pinguear
-  try{
-    // setDoc con merge:true — no crea el documento si no existe, y no pisa
-    // ningún campo que no mandemos. Si falla (sin red) no pasa nada.
-    import("https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js").then(function(m){
-      m.setDoc(m.doc(db,'olimpo_personajes',whoMe), { lastSeen: m.serverTimestamp() }, { merge: true }).catch(function(){});
-    }).catch(function(){});
-  }catch(e){}
+  if(!whoMe) return;
+  setDoc(doc(db,'olimpo_personajes',whoMe), { lastSeen: serverTimestamp() }, { merge: true }).catch(function(){});
 })();
 
 // Personajes de staff con activación gateada por código — no dejan crear
