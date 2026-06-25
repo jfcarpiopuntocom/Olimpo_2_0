@@ -311,6 +311,15 @@ main.console{max-width:1280px;margin:0 auto;padding:14px;display:flex;flex-direc
 .pin-cancel{background:transparent;border:1px solid var(--text3);color:var(--text2) !important;-webkit-text-fill-color:var(--text2) !important}
 
 footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;color:var(--text3) !important;-webkit-text-fill-color:var(--text3) !important;font-size:.82rem}
+
+/* ---- micro mejoras JFC 2026-06-24 ---- */
+/* 2: timestamp relativo dentro de la burbuja */
+.bubble-ts{display:block;font-size:.58rem;font-weight:400;opacity:.65;margin-top:2px;text-align:right}
+/* 4: typing indicator — parpadea en jade como el cursor */
+.char.is-typing .char-status{color:var(--jade) !important;-webkit-text-fill-color:var(--jade) !important;animation:blink .7s steps(1) infinite}
+/* 5: último género de radio escuchado — borde atenuado + flecha de retorno */
+.radio-genre.last-played:not(.active){border-color:rgba(232,160,32,.55)}
+.radio-genre.last-played:not(.active)::after{content:'↩';font-size:.5rem;margin-left:2px;opacity:.7}
 </style>
 </head>
 <body>
@@ -702,6 +711,8 @@ let me = localStorage.getItem('olimpo_me') || null;
 let personajesData = {}; // existencia/roles, vía Firestore — solo identidad, tráfico mínimo
 let bubbles = JSON.parse(localStorage.getItem('olimpo_bubbles') || '{}'); // {nombre:{text,ts}} — vía P2P, nunca toca servidor
 function saveBubbles(){ localStorage.setItem('olimpo_bubbles', JSON.stringify(bubbles)); }
+// 4: typing indicator — estado P2P efímero, nunca se persiste
+let typingState = {}; // {nombre: tsLastTyping} — sólo vive en memoria
 
 // Avatares cyborg reales del "Club Cyborg Roster" provisto por JFC
 // (avatars/*.png, fondo transparente) — 11 diseños únicos (3 leen como
@@ -767,13 +778,19 @@ function renderBoard(){
       const ls = personajesData[c.name] && personajesData[c.name].lastSeen;
       const lsMs = ls && ls.toMillis ? ls.toMillis() : (typeof ls==='number'?ls:0);
       const isActive = lsMs >= (Date.now() - 2*60*60*1000);
-      div.className = 'char' + (me===c.name ? ' me' : '') + (isActive ? ' is-active' : '');
-      const bubble = bubbleAlive ? '<div class="bubble">'+escapeHtml(b.text)+'</div>' : '';
+      // 4: typing indicator — activo si el peer emitió typing en los últimos 3s
+      const isTyping = !!(typingState[c.name] && (Date.now() - typingState[c.name] < 3000));
+      div.className = 'char' + (me===c.name ? ' me' : '') + (isActive ? ' is-active' : '') + (isTyping ? ' is-typing' : '');
+      // 2: timestamp relativo — "ahora" o "N min" en la esquina de la burbuja
+      var bubbleTimeStr = '';
+      if(bubbleAlive){ var bAge = Math.max(0, Math.round((Date.now()-(b.ts||0))/60000)); bubbleTimeStr = bAge < 1 ? 'ahora' : (bAge + ' min'); }
+      const bubble = bubbleAlive ? '<div class="bubble">'+escapeHtml(b.text)+'<span class="bubble-ts">'+bubbleTimeStr+'</span></div>' : '';
+      const statusText = me===c.name ? 'Eres tú' : (isTyping ? '···' : 'en el club');
       div.innerHTML =
         bubble +
         '<img class="sprite" loading="lazy" alt="'+safeName+'" src="'+avatarUrl(c)+'">' +
         '<div class="char-name">'+safeName+'</div>' +
-        '<div class="char-status">'+(me===c.name?'Eres tú':'en el club')+'</div>';
+        '<div class="char-status">'+statusText+'</div>';
       // Click en tu avatar = menú de opciones (nickname, avatar, PIN, reset)
       // Click en otro avatar = entrar como ese personaje
       div.onclick = (me===c.name) ? function(){ openAvatarMenu(); } : function(){ claimOrVerify(c.name); };
@@ -946,6 +963,17 @@ document.querySelectorAll('.pin-overlay').forEach(function(ov){
 document.addEventListener('keydown', function(e){
   if(e.key === 'Escape'){
     document.querySelectorAll('.pin-overlay.show').forEach(function(ov){ ov.classList.remove('show'); });
+  }
+});
+// 3: atajo "/" — enfocar input de chat desde cualquier parte (estilo Discord/GitHub)
+document.addEventListener('keydown', function(e){
+  if(e.key === '/' &&
+     document.activeElement.tagName !== 'INPUT' &&
+     document.activeElement.tagName !== 'TEXTAREA' &&
+     !document.querySelector('.pin-overlay.show')){
+    e.preventDefault();
+    var inp = document.getElementById('msgInput');
+    inp.focus();
   }
 });
 
@@ -1157,17 +1185,26 @@ onSnapshot(collection(db,'olimpo_personajes'), function(snap){
   const data = {};
   snap.forEach(function(d){ data[d.id] = d.data(); });
   personajesData = data;
-  // El contador cuenta actividad REAL — solo quienes se vieron (crearon o
-  // verificaron su PIN) en las últimas 2h, no el total histórico de
-  // nombres alguna vez reclamados. Se recalcula solo (onSnapshot es en vivo).
-  const cutoff = Date.now() - 2*60*60*1000;
-  let active = 0;
+  // Dos métricas en un badge — profundidad temporal sin infraestructura extra.
+  // ventana 72h: cuántos visitaron el club esta semana (engagement social).
+  // ventana 2h: cuántos están activos ahora mismo (presencia en vivo).
+  // Ambas cutoffs calculadas sobre el mismo personajesData — cero queries adicionales.
+  const cutoff2h  = Date.now() -  2*60*60*1000;
+  const cutoff72h = Date.now() - 72*60*60*1000;
+  let active2h = 0, visited72h = 0;
   Object.keys(data).forEach(function(n){
     const ls = data[n].lastSeen;
     const ms = ls && ls.toMillis ? ls.toMillis() : 0;
-    if(ms >= cutoff) active++;
+    if(ms >= cutoff72h) visited72h++;
+    if(ms >= cutoff2h)  active2h++;
   });
-  onlineCountEl.textContent = active >= 1 ? (active + ' en el club') : 'llegando al club';
+  onlineCountEl.textContent = visited72h >= 1
+    ? (visited72h + ' visitaron · ' + active2h + ' activos hoy')
+    : 'llegando al club';
+  // 1: tab title dinámico — notificación pasiva para quien tiene el club en background
+  document.title = active2h >= 1
+    ? ('OLIMPO (' + active2h + ') — Consola del Club')
+    : 'OLIMPO 2.0 — Consola del Club';
   renderBoard();
   loadDmInbox();
   // Nostr siempre manda — re-sincroniza avatares cada vez que hay datos nuevos.
@@ -1186,6 +1223,14 @@ let sendBubble = null;
     const room = window.__trystero.joinRoom({ appId: 'olimpo-2-0-v1' }, 'olimpo-club');
     const [sendB, getB] = room.makeAction('bubble');
     const [sendS, getS] = room.makeAction('sync');
+    // 4: typing indicator — acción efímera, sin persistencia ni servidor
+    const [sendT, getT] = room.makeAction('typing');
+    window.__sendTyping = sendT;
+    getT(function(data){
+      if(!data || typeof data.name!=='string') return;
+      typingState[data.name] = data.typing ? Date.now() : 0;
+      renderBoard();
+    });
     sendBubble = sendB;
 
     getB(function(data){
@@ -1222,6 +1267,10 @@ function send(){
   if(!me){ alert('Primero toca tu personaje en el tablero y crea tu PIN.'); return; }
   playClickSfx();
   msgInput.value='';
+  // 4: apagar typing indicator propio al enviar
+  clearTimeout(__typingTimer);
+  if(window.__sendTyping) window.__sendTyping({ name: me, typing: false });
+  typingState[me] = 0;
   bubbles[me] = { text: text, ts: Date.now() };
   saveBubbles();
   renderBoard();
@@ -1245,6 +1294,17 @@ function send(){
 }
 msgSend.onclick = send;
 msgInput.addEventListener('keydown', function(e){ if(e.key==='Enter') send(); });
+// 4: emitir typing al escribir — debounce 1.5s para el apagado
+var __typingTimer = null;
+msgInput.addEventListener('input', function(){
+  if(!me || !window.__sendTyping) return;
+  window.__sendTyping({ name: me, typing: true });
+  clearTimeout(__typingTimer);
+  __typingTimer = setTimeout(function(){
+    if(window.__sendTyping) window.__sendTyping({ name: me, typing: false });
+    typingState[me] = 0;
+  }, 1500);
+});
 
 /* ---- al cargar, recuperamos los últimos mensajes del club desde los
    relés de Nostr (quien no estuvo conectado P2P se pone al día igual). ---- */
@@ -1649,8 +1709,11 @@ document.getElementById('eventos-list').innerHTML = '<div class="anuncio">Noveda
 
   function playRadio(genre,btn){
     var trackEl=document.getElementById('radioTrack');
-    document.querySelectorAll('.radio-genre').forEach(function(b){ b.classList.remove('active'); });
-    btn.classList.add('active'); trackEl.textContent='Buscando emisora…';
+    document.querySelectorAll('.radio-genre').forEach(function(b){ b.classList.remove('active'); b.classList.remove('last-played'); });
+    btn.classList.add('active');
+    // 5: recordar último género escuchado — para restaurar indicador al volver
+    localStorage.setItem('olimpo_radio_last', genre);
+    trackEl.textContent='Buscando emisora…';
     fetchCandidates(genre).then(function(urls){
       if(!urls.length){ trackEl.textContent='No se encontró señal, intenta otra'; btn.classList.remove('active'); return; }
       tryPlayCandidates(urls,0,trackEl,btn);
@@ -1670,9 +1733,17 @@ document.getElementById('eventos-list').innerHTML = '<div class="anuncio">Noveda
   document.getElementById('radioStop').onclick = function(){
     var player=document.getElementById('radioAudio');
     player.onerror=null; player.pause(); player.removeAttribute('src'); player.load();
-    document.querySelectorAll('.radio-genre').forEach(function(b){ b.classList.remove('active'); });
+    document.querySelectorAll('.radio-genre').forEach(function(b){ b.classList.remove('active'); b.classList.remove('last-played'); });
     document.getElementById('radioTrack').textContent='';
+    localStorage.removeItem('olimpo_radio_last');
   };
+  // 5: restaurar indicador visual del último género al volver a la página (sin autoplay)
+  (function(){
+    var lg = localStorage.getItem('olimpo_radio_last');
+    if(!lg) return;
+    var lb = document.querySelector('.radio-genre[data-genre="'+lg+'"]');
+    if(lb) lb.classList.add('last-played');
+  })();
 })();
 </script>
 
