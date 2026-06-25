@@ -1085,13 +1085,9 @@ document.getElementById('pinConfirm').onclick = async function(){
       const signed = finalizeEvent(tmpl, secretKey);
       await withTimeout(Promise.any(pool.publish(RELAYS, signed)), 9000); // basta con que UN relé lo acepte
       recordLocalWrite(pendingName, tmpl.created_at);
-<<<<<<< HEAD
       // espejo de cortesía en Firebase — best-effort, nunca bloquea ni decide nada;
       // solo sirve para que el tablero pueda listar nicknames sin tener que
       // adivinarlos buscando en relés. Si falla, no pasa nada.
-=======
-      // cache de presencia — best-effort, nunca bloquea, Nostr es la fuente de verdad.
->>>>>>> 38f5e77 (Pulso 3s, header fix, avatares persistent, Anuncios Nostr (Jose panel), Firebase refs fuera)
       setDoc(doc(db,'olimpo_personajes',pendingName), { pubkey: myPubkey, role: role, avatar: avatar, lastSeen: serverTimestamp() }).catch(function(){});
       personajesData[pendingName] = Object.assign({}, personajesData[pendingName], { pubkey: myPubkey, role: role, avatar: avatar });
       localStorage.setItem('olimpo_avatar_'+pendingName, avatar);
