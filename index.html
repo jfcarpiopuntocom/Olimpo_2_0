@@ -369,6 +369,38 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
 }
 
 /* E: bienvenida personalizada — texto del boot ya es dinámico vía JS */
+
+/* ======================================================
+   FEATURES 1 2 3 4 — retención social
+   ====================================================== */
+
+/* 1: tooltip "última vez que X habló" — hover desktop, long-press mobile */
+.char-tooltip{
+  position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);
+  background:#0B0A12;border:1px solid rgba(232,160,32,.5);border-radius:6px;
+  padding:3px 8px;font-size:.6rem;white-space:nowrap;
+  color:var(--gold) !important;-webkit-text-fill-color:var(--gold) !important;
+  pointer-events:none;z-index:15;opacity:0;transition:opacity .15s;
+}
+.char:hover .char-tooltip,
+.char.tip-show .char-tooltip{ opacity:1; }
+
+/* 4: bounce al llegar burbuja nueva */
+@keyframes charBounce{
+  0%{transform:translateY(0)}
+  35%{transform:translateY(-7px)}
+  65%{transform:translateY(-3px)}
+  100%{transform:translateY(0)}
+}
+.char.bouncing{ animation:charBounce .38s ease-out; }
+@media(prefers-reduced-motion:reduce){ .char.bouncing{ animation:none; } }
+
+/* 2: punto de notificación en el tab / badge del historial */
+#historyNotifDot{
+  display:inline-block;width:7px;height:7px;border-radius:50%;
+  background:var(--ember);margin-left:6px;vertical-align:middle;
+  animation:pulse 1.4s infinite;
+}
 </style>
 </head>
 <body>
@@ -556,7 +588,7 @@ footer{padding:30px 18px 10px;text-align:center;font-family:Arial,sans-serif;col
 
 <div class="pin-overlay" id="historyOverlay">
   <div class="pin-box" style="max-width:440px">
-    <h3>Chat del club</h3>
+    <h3>Chat del club<span id="historyNotifDot" style="display:none"></span></h3>
     <p>Últimos 50 mensajes del club.</p>
     <div class="msglist" id="clubChatList" style="max-height:50vh"><div class="msg-empty">Cargando…</div></div>
     <div class="pin-actions" style="flex-direction:column;gap:8px">
@@ -905,8 +937,27 @@ function renderBoard(){
       const rxData = reactions[c.name] || {};
       const rxStr = Object.keys(rxData).map(function(em){ return em+(rxData[em]>1?rxData[em]:''); }).join('');
       const rxBadge = rxStr ? '<div class="char-reactions">'+rxStr+'</div>' : '<div class="char-reactions"></div>';
+      // 1: tooltip "última vez que X habló" — usa bubble.ts si existe, si no lastSeen
+      var tooltipStr = '';
+      (function(){
+        var ts = (b && b.ts) ? b.ts : lsMs;
+        if(!ts) return;
+        var diffMs = Date.now() - ts;
+        var diffMin = Math.floor(diffMs / 60000);
+        var diffH   = Math.floor(diffMs / 3600000);
+        var diffD   = Math.floor(diffMs / 86400000);
+        var ago = diffMin < 2 ? 'ahora mismo'
+          : diffMin < 60 ? 'hace ' + diffMin + ' min'
+          : diffH < 24   ? 'hace ' + diffH + 'h'
+          : diffD === 1  ? 'ayer'
+          : 'hace ' + diffD + ' días';
+        tooltipStr = me===c.name ? 'Eres tú · '+ago
+          : (b && b.ts ? c.name+' habló '+ago : c.name+' pasó '+ago);
+      })();
+      const tooltipHtml = tooltipStr ? '<div class="char-tooltip">'+escapeHtml(tooltipStr)+'</div>' : '';
       div.innerHTML =
         bubble +
+        tooltipHtml +
         '<img class="sprite" loading="lazy" alt="'+safeName+'" src="'+avatarUrl(c)+'">' +
         '<div class="char-name">'+safeName+'</div>' +
         '<div class="char-status">'+statusText+'</div>' +
@@ -1438,6 +1489,23 @@ let sendBubble = null;
       bubbles[data.name] = { text: data.text.slice(0,80), ts: Date.now() };
       saveBubbles();
       renderBoard();
+      // 4: bounce en el avatar del personaje que habló
+      (function(){
+        var charDivs = document.querySelectorAll('#board .char');
+        charDivs.forEach(function(d){
+          var nameEl = d.querySelector('.char-name');
+          if(nameEl && nameEl.textContent === data.name){
+            d.classList.remove('bouncing');
+            void d.offsetWidth; // force reflow para reiniciar animación
+            d.classList.add('bouncing');
+            setTimeout(function(){ d.classList.remove('bouncing'); }, 400);
+          }
+        });
+      })();
+      // 2: marcar que hay mensajes nuevos mientras la página está en background
+      window.__newMsgWhileHidden = document.hidden;
+      if(document.hidden) updateNotifDot(true);
+      fireNotif(data.name, data.text);
     });
     getS(function(data){
       if(!data || typeof data!=='object') return;
@@ -1458,6 +1526,38 @@ let sendBubble = null;
   else window.addEventListener('load', start); // por si el loader de trystero aún no terminó
 })();
 
+/* ---- 2: notificaciones de background + punto rojo en historial ---- */
+// Pedir permiso silencioso (sin bloquear) la primera vez que el usuario envía
+// un mensaje — es el momento con más contexto para que acepte.
+function requestNotifPermission(){
+  if(typeof Notification === 'undefined') return;
+  if(Notification.permission === 'default'){
+    Notification.requestPermission().catch(function(){});
+  }
+}
+function fireNotif(name, text){
+  if(typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+  if(!document.hidden) return; // solo si el tab está en background
+  try{
+    new Notification('Olimpo 2.0 — ' + name, {
+      body: text,
+      icon: 'https://raw.githubusercontent.com/jfcarpiopuntocom/Olimpo_2_0/main/avatars/pelusa.png',
+      tag: 'olimpo-bubble', // reemplaza notif anterior en vez de apilar
+      silent: false
+    });
+  }catch(e){}
+}
+var __notifDotOn = false;
+function updateNotifDot(on){
+  __notifDotOn = on;
+  var dot = document.getElementById('historyNotifDot');
+  if(dot) dot.style.display = on ? 'inline-block' : 'none';
+}
+// visibilitychange: al volver al tab apagar el punto y limpiar flag
+document.addEventListener('visibilitychange', function(){
+  if(!document.hidden && __notifDotOn) updateNotifDot(false);
+});
+
 const msgInput = document.getElementById('msgInput');
 const msgSend = document.getElementById('msgSend');
 
@@ -1465,6 +1565,7 @@ function send(){
   const text = msgInput.value.trim();
   if(!text) return;
   if(!me){ alert('Primero toca tu personaje en el tablero y crea tu PIN.'); return; }
+  requestNotifPermission(); // 2: momento de mayor contexto para pedir permiso
   playClickSfx();
   msgInput.value='';
   // 4: apagar typing indicator propio al enviar
@@ -1549,12 +1650,32 @@ async function openAvatarMenu(){
   const list = document.getElementById('clubChatList');
   list.innerHTML = '<div class="msg-empty">Cargando…</div>';
   overlay.classList.add('show');
+  updateNotifDot(false); // 2: limpiar punto rojo al abrir el historial
   try{
     const events = (await withTimeout(pool.querySync(RELAYS, { kinds:[1], '#t':['olimpo-club-v1'], limit:50 }), 8000))
       .filter(function(ev){ return STALE_TEST_MESSAGES.indexOf(ev.content)===-1; });
     events.sort(function(a,b){ return a.created_at-b.created_at; });
     if(!events.length){ list.innerHTML = '<div class="msg-empty">Aún nadie ha dejado mensaje.</div>'; return; }
-    list.innerHTML = events.map(function(ev){
+    // 3: resumen de actividad de la semana — calculado al vuelo de los mismos eventos
+    var cutoffWeek = Date.now()/1000 - 7*86400;
+    var weekEvents = events.filter(function(ev){ return ev.created_at >= cutoffWeek; });
+    var summaryHtml = '';
+    if(weekEvents.length){
+      var speakerCount = {};
+      weekEvents.forEach(function(ev){
+        var nameTag = ev.tags.find(function(t){ return t[0]==='olimpo_name'; });
+        var n = nameTag ? nameTag[1] : '???';
+        speakerCount[n] = (speakerCount[n]||0)+1;
+      });
+      var speakers = Object.keys(speakerCount);
+      var topSpeaker = speakers.reduce(function(a,b){ return speakerCount[a]>=speakerCount[b]?a:b; }, speakers[0]);
+      summaryHtml = '<div style="font-size:.72rem;color:var(--jade);-webkit-text-fill-color:var(--jade);'
+        +'background:rgba(40,236,170,.07);border-radius:6px;padding:6px 10px;margin-bottom:10px;line-height:1.5">'
+        +'Esta semana · <b>'+weekEvents.length+'</b> mensajes · <b>'+speakers.length+'</b> '+(speakers.length===1?'persona':'personas')
+        +(topSpeaker ? ' · más activo: <b>'+escapeHtml(topSpeaker)+'</b>' : '')
+        +'</div>';
+    }
+    list.innerHTML = summaryHtml + events.map(function(ev){
       const nameTag = ev.tags.find(function(t){ return t[0]==='olimpo_name'; });
       const name = nameTag ? nameTag[1] : '???';
       const when = new Date(ev.created_at*1000).toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit'});
