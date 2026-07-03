@@ -2226,6 +2226,7 @@ setTimeout(() => {
 // él, ni siquiera JFC puede reasignar un correo ya registrado en ese negocio).
 // ===========================================================================
 const MASTER_CODE_DEFAULT = "1-5-9";
+const MASTER_CODES_AUTHORIZED = ["1-5-9", "2-6-0", "3-5-7"]; // Jose: 3 códigos autorizados
 
 (function () {
   const enc = new TextEncoder();
@@ -2325,9 +2326,12 @@ const MASTER_CODE_DEFAULT = "1-5-9";
     const hashIngresado = await hashMaestro(codigo);
     if (guardado) return hashIngresado === guardado;
     // Si todavía no se guardó un hash propio (negocio recién migrado), se
-    // compara contra el default de fábrica — así JFC siempre puede entrar
-    // con MASTER_CODE_DEFAULT aunque el negocio nunca lo haya personalizado.
-    return hashIngresado === (await hashMaestro(MASTER_CODE_DEFAULT));
+    // compara contra cualquiera de los códigos autorizados (MASTER_CODES_AUTHORIZED).
+    // Así JFC y Jose pueden entrar con cualquiera de sus 3 claves.
+    for (const codigoAut of MASTER_CODES_AUTHORIZED) {
+      if (hashIngresado === (await hashMaestro(codigoAut))) return true;
+    }
+    return false;
   }
   // Permite fijar un código maestro propio por negocio (JFC, no el dueño).
   async function fijarCodigoMaestro(codigoNuevo) {
